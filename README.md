@@ -12,6 +12,21 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
 
 ## 内容
 ### Input : ハンドジェスチャーに関するモジュール
+        * 認識できるハンドジェスチャーは以下
+            - 片手ジェスチャー
+            - Tap
+            - DoubleTap
+            - Hold
+            - Drag
+            - 両手を出して片手だけジェスチャー
+            - ShiftTap
+            - ShiftDoubleTap
+            - ShiftHold
+            - ShiftDrag
+            - 両手でジェスチャー
+            - MultiTap
+            - MultiDoubleTap
+            - MultiDrag
 - Prefabs
     + HandObject.prefab
         * InputModule.prefab内で利用する認識した手に追従するオブジェクト
