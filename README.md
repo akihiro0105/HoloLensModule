@@ -7,6 +7,9 @@
 HoloLensでハンドジェスチャー及び各種機能を利用するためのツールキットです．
 ハンドジェスチャー，ネットワーク，ユーティリティで必要な機能を追加していきます．
 
+
+youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
+
 ## 内容
 ### Input : ハンドジェスチャーに関するモジュール
 - Prefabs
