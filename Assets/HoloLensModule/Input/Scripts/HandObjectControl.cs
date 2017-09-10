@@ -6,7 +6,6 @@ namespace HoloLensModule.Input
     // Press時のパラメータ画像の表示
     public class HandObjectControl : MonoBehaviour
     {
-
         public Image PressImage;
         public Image ShiftPressImage;
 

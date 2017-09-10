@@ -20,9 +20,10 @@ namespace HoloLensModule.Input
         public delegate void HandGestureEventHandler(HandGestureState state);
         public delegate void SingleHandGestureEventHandler(HandGestureState state,Vector3 pos);
         public delegate void MultiHandGestureEventHandler(HandGestureState state, Vector3 pos1,Vector3 pos2);
-        public static event HandGestureEventHandler HandGestureEvent;
-        public static event SingleHandGestureEventHandler SingleHandGestureEvent;
-        public static event MultiHandGestureEventHandler MultiHandGestureEvent;
+        public static event HandGestureEventHandler HandGestureEvent;// Tap, DoubleTap, Hold(Shift,Multi)
+        public static event HandGestureEventHandler ReleaseHandGestureEvent;// Release
+        public static event SingleHandGestureEventHandler SingleHandGestureEvent;// Drag(DragStart)
+        public static event MultiHandGestureEventHandler MultiHandGestureEvent;// MultiDrag(MultiDragStart)
 
         public enum HandGestureState
         {
@@ -320,7 +321,7 @@ namespace HoloLensModule.Input
                     }
                 }
             }
-            if (HandGestureEvent != null) HandGestureEvent(HandGestureState.Release);
+            if (HandGestureEvent != null) ReleaseHandGestureEvent(HandGestureState.Release);
         }
     }
 }

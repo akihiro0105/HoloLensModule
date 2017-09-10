@@ -49,8 +49,6 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
         * オブジェクトのサイズ(Colliderがついているオブジェクトにアタッチ)
     + RayCastControl.cs
         * 視線上のオブジェクトを検出する
-    + StabilizationCamera.cs
-        * HoloLensの表示安定化
 ### Network : TCP,UDP,RestAPIでの通信を行うためのモジュール
 - RestAPI/Scripts
     + RestAPIJsonManager.cs

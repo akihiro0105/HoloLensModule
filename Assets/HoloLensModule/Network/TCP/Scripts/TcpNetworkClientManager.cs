@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using System;
+using System.Text;
 #if UNITY_UWP
 using System.IO;
 using System.Threading.Tasks;
+using Windows.Networking;
 using Windows.Networking.Sockets;
 #elif UNITY_EDITOR || UNITY_STANDALONE
 using System.Threading;
@@ -12,132 +13,108 @@ using System.Net.Sockets;
 
 namespace HoloLensModule.Network
 {
-    public class TcpNetworkClientManager : MonoBehaviour
+    public class TcpNetworkClientManager
     {
-
-        public string IP = "";
-        public int Port = 1111;
-
         public delegate void ConnectMessageHandler();
-        public delegate void ReceiveMessageHandler(Byte[] data);
+        public delegate void ReceiveMessageHandler(string data);
         public ConnectMessageHandler ConnectMessage;
         public ConnectMessageHandler DisconnectMessage;
         public ReceiveMessageHandler ReceiveMessage;
 
 #if UNITY_UWP
         private Stream streamOut = null;
+        private string errorstring = "";
 #elif UNITY_EDITOR || UNITY_STANDALONE
         private Thread thread = null;
         private NetworkStream stream = null;
 #endif
+        private bool ConnectFlag = false;
 
-        public void Connect()
+        public TcpNetworkClientManager(string IP,int port)
         {
-            Disconnect();
+            ConnectFlag = true;
 #if UNITY_UWP
-            Task task = new Task(TaskProcess);
-            task.Start();
+            Task.Run(async () => {
+                StreamSocket socket = new StreamSocket();
+                HostName serverhost = new HostName(IP);
+                await socket.ConnectAsync(serverhost, port.ToString());
+                streamOut = socket.OutputStream.AsStreamForWrite();
+                Stream streamIn = socket.InputStream.AsStreamForRead();
+                //streamIn.ReadTimeout = 100;
+                if (ConnectMessage != null) ConnectMessage();
+                while (ConnectFlag)
+                {
+                    try
+                    {
+                        byte[] bytes = new byte[2048];
+                        await streamIn.ReadAsync(bytes, 0, bytes.Length);
+                        string data = Encoding.UTF8.GetString(bytes);
+                        if (ReceiveMessage != null) ReceiveMessage(data);
+                    }
+                    catch (Exception) { }
+                }
+                if (DisconnectMessage != null) DisconnectMessage();
+                if (streamOut != null) streamOut.Dispose();
+                streamOut = null;
+            });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            thread = new Thread(ThreadProcess);
-            thread.Start();
+            TcpClient tcp = new TcpClient(IP, port);
+            thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
+            thread.Start(tcp);
 #endif
         }
 
-        public void Disconnect()
+        public void DeleteManager()
         {
+            ConnectFlag = false;
 #if UNITY_UWP
             if (streamOut != null) streamOut.Dispose();
             streamOut = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (thread != null)
-            {
-                if (stream != null) stream.Close();
-                thread.Abort();
-            }
+            thread.Abort();
             stream = null;
             thread = null;
 #endif
         }
 
-        public void SendMessage(Byte[] data)
+        public void SendMessage(string data)
         {
+            byte[] bytes = Encoding.UTF8.GetBytes(data);
 #if UNITY_UWP
             if (streamOut != null) Task.Run(async () =>
              {
-                 await streamOut.WriteAsync(data, 0, data.Length);
+                 await streamOut.WriteAsync(bytes, 0, bytes.Length);
                  await streamOut.FlushAsync();
              });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (stream != null) stream.Write(data, 0, data.Length);
+            if (stream != null) stream.Write(bytes, 0, bytes.Length);
 #endif
         }
 
 #if UNITY_UWP
-        private string errorstring = "";
-        private async void TaskProcess()
-        {
-            try
-            {
-                StreamSocket socket = new StreamSocket();
-                Windows.Networking.HostName serverhost = new Windows.Networking.HostName(IP);
-                await socket.ConnectAsync(serverhost, Port.ToString());
-
-                streamOut = socket.OutputStream.AsStreamForWrite();
-                Stream streamIn = socket.InputStream.AsStreamForRead();
-                if (ConnectMessage != null) ConnectMessage();
-
-                Byte[] bytes = new Byte[1024];
-                while (true)
-                {
-                    int bytecount=await streamIn.ReadAsync(bytes, 0, bytes.Length);
-                    byte[] data = new byte[bytecount];
-                    Buffer.BlockCopy(bytes, 0, data, 0, bytecount);
-                    if (ReceiveMessage != null) ReceiveMessage(data);
-                }
-            }
-            catch (Exception e)
-            {
-                errorstring = e.ToString();
-                if (DisconnectMessage != null) DisconnectMessage();
-                if (streamOut != null) streamOut.Dispose();
-                streamOut = null;
-            }
-        }
-
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private void ThreadProcess()
+        private void ThreadProcess(object obj)
         {
-            try
+            TcpClient tcp = (TcpClient)obj;
+            tcp.ReceiveTimeout = 100;
+            stream = tcp.GetStream();
+            Debug.Log("Connect Client");
+            if (ConnectMessage != null) ConnectMessage();
+            while (ConnectFlag)
             {
-                TcpClient tcp = new TcpClient(IP, Port);
-                stream = tcp.GetStream();
-                if (ConnectMessage != null) ConnectMessage();
-                byte[] bytes = new byte[1024];
-                while (tcp.Connected)
+                try
                 {
-                    int bytecount = stream.Read(bytes, 0, bytes.Length);
-                    byte[] data = new byte[bytecount];
-                    Buffer.BlockCopy(bytes, 0, data, 0, bytecount);
+                    byte[] bytes = new byte[tcp.ReceiveBufferSize];
+                    stream.Read(bytes, 0, bytes.Length);
+                    string data = Encoding.UTF8.GetString(bytes);
                     if (ReceiveMessage != null) ReceiveMessage(data);
                 }
-                if (DisconnectMessage != null) DisconnectMessage();
-                stream.Close();
-                stream = null;
-                tcp.Close();
+                catch (Exception) { }
             }
-            catch (Exception e)
-            {
-                Debug.Log(e);
-                if (DisconnectMessage != null) DisconnectMessage();
-                if (stream != null) stream.Close();
-                stream = null;
-            }
+            stream.Close();
+            tcp.Close();
+            if (DisconnectMessage != null) DisconnectMessage();
         }
 #endif
-
-        void OnDestroy()
-        {
-            Disconnect();
-        }
     }
 }
