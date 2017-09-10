@@ -1,7 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using System;
+﻿using System;
 #if UNITY_UWP
 using System.IO;
 using System.Threading.Tasks;
@@ -15,112 +12,69 @@ using System.Text;
 
 namespace HoloLensModule.Network
 {
-    public class UdpNetworkListenManager : MonoBehaviour
+    public class UdpNetworkListenManager
     {
-        public int port =1234;
-        [SerializeField]
-        private bool OnAwake = true;
-
-        public delegate void UdpNetworkListenEventHandler(string data);
+        public delegate void UdpNetworkListenEventHandler(string data,string address);
         public UdpNetworkListenEventHandler UdpNetworkListenEvent;
-
 #if UNITY_UWP
-        private Task task = null;
-        private DatagramSocket socket;
+        private DatagramSocket socket=null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
         private Thread thread = null;
-        private UdpClient udpclient;
-        private IPEndPoint remote;
-#endif
         private bool ListenFlag = false;
-
-        // Use this for initialization
-        void Start()
-        {
-            if (OnAwake) StartListener();
-        }
-
-        // Update is called once per frame
-        void Update()
-        {
-
-        }
-
-        void OnDestroy()
-        {
-            StopListener();
-#if UNITY_UWP
-#elif UNITY_EDITOR || UNITY_STANDALONE
-            if (thread != null) thread.Abort();
 #endif
-        }
 
-        public void StartListener()
+        public UdpNetworkListenManager(int port)
         {
-            ListenFlag = true;
 #if UNITY_UWP
-            task = new Task(TaskProcess);
-            task.Start();
+            Task.Run(async () =>
+             {
+                socket = new DatagramSocket();
+                socket.MessageReceived += MessageReceived;
+                await socket.BindServiceNameAsync(port.ToString());
+             });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            udpclient = new UdpClient(port);
-            udpclient.Client.ReceiveTimeout = 1000;
-            remote = new IPEndPoint(IPAddress.Any, port);
-
-            thread = new Thread(ThreadProcess);
+            ListenFlag = true;
+            thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
             thread.Start();
 #endif
         }
 
-        public void StopListener()
+        public void DeleteManager()
         {
-            ListenFlag = false;
 #if UNITY_UWP
+            socket.MessageReceived -= MessageReceived;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            udpclient.Close();
+            ListenFlag = false;
+            if (thread != null) thread.Abort();
 #endif
         }
 
 #if UNITY_UWP
-        private string error = "";
-        async void TaskProcess()
-        {
-            socket = new DatagramSocket();
-            socket.MessageReceived += MessageReceived;
-            try
-            {
-                await socket.BindServiceNameAsync(port.ToString());
-            }
-            catch (Exception e)
-            {
-                error = e.ToString();
-            }
-        }
-
         async void MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
         {
             Stream streamIn = args.GetDataStream().AsStreamForRead();
             StreamReader reader = new StreamReader(streamIn);
             string data = await reader.ReadLineAsync();
-            if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(data);
+            if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(data, args.RemoteAddress.DisplayName);
         }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private void ThreadProcess()
+        private void ThreadProcess(object obj)
         {
-            Debug.Log("UDP Server Start");
+            int port = (int)obj;
+            UdpClient udpclient = new UdpClient(port);
+            udpclient.Client.ReceiveTimeout = 100;
+            IPEndPoint remote = new IPEndPoint(IPAddress.Any, port);
             while (ListenFlag)
             {
                 try
                 {
                     byte[] bytes = udpclient.Receive(ref remote);
                     string data = Encoding.UTF8.GetString(bytes);
-                    if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(data);
+                    if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(data, remote.Address.ToString());
                 }
-                catch (Exception e)
-                {
-                    Debug.Log(e);
-                }
+                catch (Exception) { }
             }
-            
+            udpclient.Close();
         }
 #endif
     }

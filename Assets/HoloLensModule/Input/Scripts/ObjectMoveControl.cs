@@ -14,26 +14,22 @@ namespace HoloLensModule.Input
 
         private bool focusflag = false;
         private bool dragflag = false;
-        private Vector3 starthand;
-        private Vector3 startpos;
+        private Vector3 deltapos;
 
         // Use this for initialization
         void Start()
         {
-            HandsGestureManager.HandGestureEvent += HandGestureEvent;
+            HandsGestureManager.ReleaseHandGestureEvent += ReleaseHandGestureEvent;
             HandsGestureManager.SingleHandGestureEvent += SingleHandGestureEvent;
         }
 
         void OnDestroy()
         {
-            HandsGestureManager.HandGestureEvent -= HandGestureEvent;
+            HandsGestureManager.ReleaseHandGestureEvent -= ReleaseHandGestureEvent;
             HandsGestureManager.SingleHandGestureEvent -= SingleHandGestureEvent;
         }
 
-        private void HandGestureEvent(HandsGestureManager.HandGestureState state)
-        {
-            if (state==HandsGestureManager.HandGestureState.Release) dragflag = false;
-        }
+        private void ReleaseHandGestureEvent(HandsGestureManager.HandGestureState state) { dragflag = false; }
 
         private void SingleHandGestureEvent(HandsGestureManager.HandGestureState state, Vector3 pos)
         {
@@ -42,16 +38,15 @@ namespace HoloLensModule.Input
                 case HandsGestureManager.HandGestureState.DragStart:
                     if (focusflag)
                     {
-                        starthand = pos;
-                        startpos = transform.position;
+                        deltapos = pos;
                         dragflag = true;
                     }
                     break;
                 case HandsGestureManager.HandGestureState.Drag:
                     if (dragflag)
                     {
-                        Vector3 move = pos - starthand;
-                        transform.position = startpos + MoveScale * move;
+                        transform.position += MoveScale * (pos - deltapos);
+                        deltapos = pos;
                         if (LookAt) transform.LookAt(Camera.main.transform.position);
                     }
                     break;

@@ -7,35 +7,27 @@ namespace HoloLensModule.Input
     // オブジェクトの回転
     public class ObjectRotationControl : MonoBehaviour, FocusInterface
     {
-        [Header("ActiveAxis")]
-        public bool X = false;
-        public bool Y = true;
-        public bool Z = false;
         [Range(1.0f, 100.0f)]
         public float RotationScale = 20.0f;
 
         private bool focusflag = false;
         private bool dragflag = false;
-        private Vector3 starthand;
-        private Quaternion startrot;
+        private Vector3 deltapos;
 
         // Use this for initialization
         void Start()
         {
-            HandsGestureManager.HandGestureEvent += HandGestureEvent;
+            HandsGestureManager.ReleaseHandGestureEvent += ReleaseHandGestureEvent;
             HandsGestureManager.SingleHandGestureEvent += SingleHandGestureEvent;
         }
 
         void OnDestroy()
         {
-            HandsGestureManager.HandGestureEvent -= HandGestureEvent;
+            HandsGestureManager.ReleaseHandGestureEvent -= ReleaseHandGestureEvent;
             HandsGestureManager.SingleHandGestureEvent -= SingleHandGestureEvent;
         }
 
-        private void HandGestureEvent(HandsGestureManager.HandGestureState state)
-        {
-            if (state == HandsGestureManager.HandGestureState.Release) dragflag = false;
-        }
+        private void ReleaseHandGestureEvent(HandsGestureManager.HandGestureState state) { dragflag = false; }
 
         private void SingleHandGestureEvent(HandsGestureManager.HandGestureState state, Vector3 pos)
         {
@@ -44,18 +36,16 @@ namespace HoloLensModule.Input
                 case HandsGestureManager.HandGestureState.ShiftDragStart:
                     if (focusflag)
                     {
-                        starthand = Camera.main.transform.TransformPoint(pos);
-                        startrot = transform.rotation;
+                        deltapos = Camera.main.transform.TransformPoint(pos);
                         dragflag = true;
                     }
                     break;
                 case HandsGestureManager.HandGestureState.ShiftDrag:
                     if (dragflag)
                     {
-                        Vector3 move = Camera.main.transform.TransformPoint(pos) - starthand;
-                        if (X) transform.rotation = startrot * Quaternion.AngleAxis(move.y * RotationScale * 10.0f, transform.right);
-                        if (Y) transform.rotation = startrot * Quaternion.AngleAxis(-move.x * RotationScale * 10.0f, transform.up);
-                        if (Z) transform.rotation = startrot * Quaternion.AngleAxis(-move.z * RotationScale * 10.0f, transform.forward);
+                        Vector3 deltamove = Camera.main.transform.TransformPoint(pos) - deltapos;
+                        transform.rotation = transform.rotation * Quaternion.AngleAxis(-deltamove.x * RotationScale * 10.0f, transform.up);
+                        deltapos = Camera.main.transform.TransformPoint(pos);
                     }
                     break;
             }

@@ -7,6 +7,8 @@ namespace HoloLensModule.Input
     // Raycastによる視線上のオブジェクトの取得
     public class RayCastControl : HoloLensModuleSingleton<RayCastControl>
     {
+        public float maxDistance = 30.0f;
+
         private GameObject bufobj = null;
         private FocusInterface[] focus;
         // Use this for initialization
@@ -19,23 +21,28 @@ namespace HoloLensModule.Input
         void Update()
         {
             RaycastHit info;
-            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out info, 30.0f))
+            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out info, maxDistance))
             {
                 if (bufobj == null)
                 {
-                    bufobj = info.transform.gameObject;
-                    focus = GetFocusInterface(bufobj);
-                    if (focus != null) for (int i = 0; i < focus.Length; i++) focus[i].FocusEnter();
-                }
-                else
-                {
-                    if (bufobj != info.transform.gameObject)
+                    focus = GetFocusInterface(info.transform.gameObject);
+                    if (focus != null)
                     {
-                        focus = GetFocusInterface(bufobj);
-                        if (focus != null) for (int i = 0; i < focus.Length; i++) focus[i].FocusEnd();
+                        for (int i = 0; i < focus.Length; i++) focus[i].FocusEnter();
                         bufobj = info.transform.gameObject;
-                        focus = GetFocusInterface(bufobj);
-                        if (focus != null) for (int i = 0; i < focus.Length; i++) focus[i].FocusEnter();
+                    }
+                }
+                else if (bufobj != info.transform.gameObject)
+                {
+                    focus = bufobj.GetComponents<FocusInterface>();
+                    for (int i = 0; i < focus.Length; i++) focus[i].FocusEnd();
+                    bufobj = null;
+
+                    focus = GetFocusInterface(info.transform.gameObject);
+                    if (focus != null)
+                    {
+                        for (int i = 0; i < focus.Length; i++) focus[i].FocusEnter();
+                        bufobj = info.transform.gameObject;
                     }
                 }
             }
@@ -43,8 +50,8 @@ namespace HoloLensModule.Input
             {
                 if (bufobj != null)
                 {
-                    focus = GetFocusInterface(bufobj);
-                    if (focus != null) for (int i = 0; i < focus.Length; i++) focus[i].FocusEnd();
+                    focus = bufobj.GetComponents<FocusInterface>();
+                    for (int i = 0; i < focus.Length; i++) focus[i].FocusEnd();
                     bufobj = null;
                 }
             }
@@ -52,17 +59,11 @@ namespace HoloLensModule.Input
 
         private FocusInterface[] GetFocusInterface(GameObject obj)
         {
-            FocusInterface[] fi = bufobj.GetComponents<FocusInterface>();
-            if (fi == null)
-            {
-                GameObject next = obj.transform.parent.gameObject;
-                if (next == null) return null;
-                else return GetFocusInterface(next);
-            }
-            else return fi;
+            if (obj == null) return null;
+            FocusInterface[] fi = obj.GetComponents<FocusInterface>();
+            if (fi == null) return GetFocusInterface(obj.transform.parent.gameObject);
+            return fi;
         }
-
-        public GameObject GetRayCastHitObject() { return bufobj; }
     }
 
     public interface FocusInterface

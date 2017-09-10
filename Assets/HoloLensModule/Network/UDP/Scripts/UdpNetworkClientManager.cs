@@ -1,9 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System;
 #if UNITY_UWP
+using System.IO;
+using System.Net;
+using System.Threading.Tasks;
+using Windows.Networking;
+using Windows.Networking.Sockets;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-using System;
 using System.Threading;
 using System.Net;
 using System.Net.Sockets;
@@ -12,40 +14,24 @@ using System.Text;
 
 namespace HoloLensModule.Network
 {
-    public class UdpNetworkClientManager : MonoBehaviour
+    public class UdpNetworkClientManager
     {
-        public int port = 1234;
-        [SerializeField]
-        private bool OnAwake = true;
 #if UNITY_UWP
+        private StreamWriter writer=null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private Thread thread = null;
         private UdpClient udpclient;
 #endif
-        // Use this for initialization
-        void Start()
-        {
-            if (OnAwake) UDPClientStart();
-        }
 
-        // Update is called once per frame
-        void Update()
-        {
-
-        }
-
-        void OnDestroy()
-        {
-            UDPClientStop();
-#if UNITY_UWP
-#elif UNITY_EDITOR || UNITY_STANDALONE
-            if (thread != null) thread.Abort();
-#endif
-        }
-
-        public void UDPClientStart()
+        public UdpNetworkClientManager(int port)
         {
 #if UNITY_UWP
+            Task.Run(async () =>
+             {
+                 DatagramSocket socket = new DatagramSocket();
+                 HostName hostname = new HostName(IPAddress.Broadcast.ToString());
+                Stream streamOut = (await socket.GetOutputStreamAsync(hostname, port.ToString())).AsStreamForWrite();
+                writer=new StreamWriter(streamOut);
+             });
 #elif UNITY_EDITOR || UNITY_STANDALONE
             udpclient = new UdpClient();
             udpclient.EnableBroadcast = true;
@@ -53,7 +39,7 @@ namespace HoloLensModule.Network
 #endif
         }
 
-        public void UDPClientStop()
+        public void DeleteManager()
         {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
@@ -61,14 +47,20 @@ namespace HoloLensModule.Network
 #endif
         }
 
-        public void UDPSendMessage(string data)
+        public void SendMessage(string data)
         {
 #if UNITY_UWP
+            if (writer != null) Task.Run(async () =>
+             {
+                 await writer.WriteAsync(data);
+                 await writer.FlushAsync();
+             });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
+            Thread thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
             thread.Start(data);
 #endif
         }
+
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
         private void ThreadProcess(object obj)
