@@ -35,7 +35,7 @@ namespace HoloLensModule.Network
 #elif UNITY_EDITOR || UNITY_STANDALONE
             ListenFlag = true;
             thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
-            thread.Start();
+            thread.Start(port);
 #endif
         }
 
