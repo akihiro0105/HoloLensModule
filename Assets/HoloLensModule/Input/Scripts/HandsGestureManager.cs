@@ -321,7 +321,7 @@ namespace HoloLensModule.Input
                     }
                 }
             }
-            if (HandGestureEvent != null) ReleaseHandGestureEvent(HandGestureState.Release);
+            if (ReleaseHandGestureEvent != null) ReleaseHandGestureEvent(HandGestureState.Release);
         }
     }
 }
