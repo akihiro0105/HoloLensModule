@@ -37,7 +37,11 @@ namespace HoloLensModule.Network
             using (UnityWebRequest www = UnityWebRequest.Post(ServerAddress, form))
             {
                 yield return www.Send();
+#if !UNITY_2017_1_OR_NEWRE
                 if (www.isError) Debug.LogError(www.error);
+#else
+                if (www.isNetworkError) Debug.LogError(www.error);
+#endif
                 else
                 {
                     if (JsonPostEvent != null) JsonPostEvent(value);
@@ -55,7 +59,11 @@ namespace HoloLensModule.Network
             using (UnityWebRequest www = UnityWebRequest.Get(ServerAddress))
             {
                 yield return www.Send();
+#if !UNITY_2017_1_OR_NEWRE
                 if (www.isError) Debug.LogError(www.error);
+#else
+                if (www.isNetworkError) Debug.LogError(www.error);
+#endif
                 else
                 {
                     string json = www.downloadHandler.text;
