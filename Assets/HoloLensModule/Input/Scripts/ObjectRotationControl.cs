@@ -54,5 +54,7 @@ namespace HoloLensModule.Input
         public void FocusEnter() { focusflag = true; }
 
         public void FocusEnd() { focusflag = false; }
+
+        public bool isMove() { return dragflag; }
     }
 }

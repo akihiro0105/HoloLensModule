@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR || UNITY_UWP
+#if !UNITY_2017_2_OR_NEWRE
 using UnityEngine.VR.WSA.Input;
+#else
+using UnityEngine.XR.WSA.Input;
+#endif
 #endif
 
 namespace HoloLensModule.Input
@@ -34,11 +38,19 @@ namespace HoloLensModule.Input
         void Start()
         {
 #if UNITY_EDITOR || UNITY_UWP
+#if !UNITY_2017_2_OR_NEWRE
             InteractionManager.SourceDetected += SourceDetected;
             InteractionManager.SourceUpdated += SourceUpdated;
             InteractionManager.SourceLost += SourceLost;
             InteractionManager.SourcePressed += SourcePressed;
             InteractionManager.SourceReleased += SourceReleased;
+#else
+            InteractionManager.InteractionSourceDetected += SourceDetected;
+            InteractionManager.InteractionSourceUpdated += SourceUpdated;
+            InteractionManager.InteractionSourceLost += SourceLost;
+            InteractionManager.InteractionSourcePressed += SourcePressed;
+            InteractionManager.InteractionSourceReleased += SourceReleased;
+#endif
 #endif
         }
 
@@ -51,11 +63,19 @@ namespace HoloLensModule.Input
         protected override void OnDestroy()
         {
 #if UNITY_EDITOR || UNITY_UWP
+#if !UNITY_2017_2_OR_NEWRE
             InteractionManager.SourceDetected -= SourceDetected;
             InteractionManager.SourceUpdated -= SourceUpdated;
             InteractionManager.SourceLost -= SourceLost;
             InteractionManager.SourcePressed -= SourcePressed;
             InteractionManager.SourceReleased -= SourceReleased;
+#else
+            InteractionManager.InteractionSourceDetected -= SourceDetected;
+            InteractionManager.InteractionSourceUpdated -= SourceUpdated;
+            InteractionManager.InteractionSourceLost -= SourceLost;
+            InteractionManager.InteractionSourcePressed -= SourcePressed;
+            InteractionManager.InteractionSourceReleased -= SourceReleased;
+#endif
 #endif
             base.OnDestroy();
         }
@@ -71,6 +91,7 @@ namespace HoloLensModule.Input
         }
 
 #if UNITY_EDITOR || UNITY_UWP
+#if !UNITY_2017_2_OR_NEWRE
         void SourceDetected(InteractionSourceState state)
         {
             Vector3 v;
@@ -146,6 +167,83 @@ namespace HoloLensModule.Input
                 }
             }
         }
+#else
+        void SourceDetected(InteractionSourceDetectedEventArgs state)
+        {
+            Vector3 v;
+            if (state.state.sourcePose.TryGetPosition(out v) == true)
+            {
+                HandPointList.Add(new HandPointClass(state.state.source.id, v));
+                if (onDetected != null) onDetected(HandPointList[HandPointList.Count - 1]);
+            }
+        }
+
+        void SourceUpdated(InteractionSourceUpdatedEventArgs state)
+        {
+            Vector3 v;
+            if (state.state.sourcePose.TryGetPosition(out v) == true)
+            {
+                for (int i = 0; i < HandPointList.Count; i++)
+                {
+                    if (HandPointList[i].id == state.state.source.id)
+                    {
+                        HandPointList[i].pos = v;
+                        if (onUpdated != null) onUpdated(HandPointList[i]);
+                        break;
+                    }
+                }
+            }
+        }
+
+        void SourceLost(InteractionSourceLostEventArgs state)
+        {
+            for (int i = 0; i < HandPointList.Count; i++)
+            {
+                if (HandPointList[i].id == state.state.source.id)
+                {
+                    if (onLost != null) onLost(HandPointList[i]);
+                    HandPointList.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+
+        void SourcePressed(InteractionSourcePressedEventArgs state)
+        {
+            Vector3 v;
+            if (state.state.sourcePose.TryGetPosition(out v) == true)
+            {
+                for (int i = 0; i < HandPointList.Count; i++)
+                {
+                    if (HandPointList[i].id == state.state.source.id)
+                    {
+                        HandPointList[i].press = true;
+                        HandPointList[i].pos = v;
+                        if (onPressed != null) onPressed(HandPointList[i]);
+                        break;
+                    }
+                }
+            }
+        }
+
+        void SourceReleased(InteractionSourceReleasedEventArgs state)
+        {
+            Vector3 v;
+            if (state.state.sourcePose.TryGetPosition(out v) == true)
+            {
+                for (int i = 0; i < HandPointList.Count; i++)
+                {
+                    if (HandPointList[i].id == state.state.source.id)
+                    {
+                        HandPointList[i].press = false;
+                        HandPointList[i].pos = v;
+                        if (onReleased != null) onReleased(HandPointList[i]);
+                        break;
+                    }
+                }
+            }
+        }
+#endif
 #endif
     }
 }

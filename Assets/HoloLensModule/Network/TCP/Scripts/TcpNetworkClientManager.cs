@@ -87,7 +87,11 @@ namespace HoloLensModule.Network
                  await streamOut.FlushAsync();
              });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (stream != null) stream.Write(bytes, 0, bytes.Length);
+            if (stream != null)
+            {
+                Thread sendthread = new Thread(()=> { stream.Write(bytes, 0, bytes.Length); });
+                sendthread.Start();
+            }
 #endif
         }
 
