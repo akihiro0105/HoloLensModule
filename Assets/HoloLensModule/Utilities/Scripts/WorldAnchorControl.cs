@@ -2,8 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_EDITOR || UNITY_UWP
+#if !UNITY_2017_2_OR_NEWER
 using UnityEngine.VR.WSA;
 using UnityEngine.VR.WSA.Persistence;
+#else
+using UnityEngine.XR.WSA;
+using UnityEngine.XR.WSA.Persistence;
+#endif
 #endif
 
 namespace HoloLensModule
