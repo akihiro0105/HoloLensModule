@@ -156,12 +156,6 @@ namespace HoloLensModule.Input
             base.OnDestroy();
         }
 
-        // Update is called once per frame
-        void Update()
-        {
-
-        }
-
         private void onDetected(HandsInteractionManager.HandPointClass hand)
         {
             HandObjects.Add(hand.id, new HandObjectClass(HandObjectPrefab, transform, HoldTriggerTime, PressIntervalTime, DragDistance));

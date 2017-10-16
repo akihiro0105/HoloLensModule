@@ -69,6 +69,8 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
 - Scripts
     + BaseSceneFunction.cs
         * シーン変更時に指定のオブジェクトを削除しないようにする
+    + Boundingbox.cs
+        * MeshFilterのあるGameObjectに対してフレームとBoxColliderを付与
     + DebugConsole.cs
         * コンソール出力を取得してUIのTextに渡す
     + DeviceActiveControl.cs
@@ -79,4 +81,5 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
         * ワールドアンカー制御
 
 ## 今後の予定
-- Unity，VisualStudioのバージョンアップに伴う改修
+- Unity2017.2の対応
+- Windows Immersive HMDの対応+モーションコントローラーの対応

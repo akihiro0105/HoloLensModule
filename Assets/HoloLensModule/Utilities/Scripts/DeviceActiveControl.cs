@@ -7,20 +7,20 @@ namespace HoloLensModule
     {
         public enum ActiveDeviceModel
         {
-            Desktop,
-            HoloLens
+            Standalone_or_Editor,
+            MRDevice
         }
         [SerializeField]
-        public ActiveDeviceModel ActiveDevice = ActiveDeviceModel.Desktop;
+        public ActiveDeviceModel ActiveDevice = ActiveDeviceModel.Standalone_or_Editor;
 
         // Use this for initialization
         void Start()
         {
 #if UNITY_UWP
-            if (ActiveDevice == ActiveDeviceModel.HoloLens) gameObject.SetActive(true);
+            if (ActiveDevice == ActiveDeviceModel.MRDevice) gameObject.SetActive(true);
             else gameObject.SetActive(false);
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (ActiveDevice == ActiveDeviceModel.Desktop) gameObject.SetActive(true);
+            if (ActiveDevice == ActiveDeviceModel.Standalone_or_Editor) gameObject.SetActive(true);
             else gameObject.SetActive(false);
 #endif
         }

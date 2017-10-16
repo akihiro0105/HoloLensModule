@@ -54,12 +54,6 @@ namespace HoloLensModule.Input
 #endif
         }
 
-        // Update is called once per frame
-        void Update()
-        {
-
-        }
-
         protected override void OnDestroy()
         {
 #if UNITY_EDITOR || UNITY_UWP

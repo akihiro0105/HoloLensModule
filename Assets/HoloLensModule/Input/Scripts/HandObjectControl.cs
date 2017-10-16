@@ -42,8 +42,7 @@ namespace HoloLensModule.Input
         public void onReleased()
         {
             pressflag = false;
-            ShiftPressImage.fillAmount = 0;
-            PressImage.fillAmount = 0;
+            ShiftPressImage.fillAmount = PressImage.fillAmount = 0;
         }
     }
 }
