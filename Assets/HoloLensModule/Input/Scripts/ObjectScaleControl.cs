@@ -9,11 +9,13 @@ namespace HoloLensModule.Input
     public class ObjectScaleControl : MonoBehaviour, FocusInterface
     {
         [Range(0.1f, 10.0f)]
-        public float Scale = 2.0f;
+        public float SizeScale = 2.0f;
         [Range(0.01f, 1.0f)]
         public float MinScale = 0.01f;
-        [Range(1.0f, 10.0f)]
-        public float MaxScale = 5.0f;
+        [Header("Lock Vector")]
+        public bool X = false;
+        public bool Y = false;
+        public bool Z = false;
 
         private bool focusflag = false;
         private bool dragflag = false;
@@ -48,18 +50,27 @@ namespace HoloLensModule.Input
                 case HandsGestureManager.HandGestureState.MultiDrag:
                     if (dragflag)
                     {
-                        float deltamove = Scale * (Vector3.Distance(pos1, pos2) - deltadistace);
-                        float minsobjectscale = transform.localScale.x;
-                        if (minsobjectscale > transform.localScale.y) minsobjectscale = transform.localScale.y;
-                        if (minsobjectscale > transform.localScale.z) minsobjectscale = transform.localScale.z;
-                        if (minsobjectscale + deltamove > MinScale && minsobjectscale + deltamove < MaxScale)
-                        {
-                            transform.localScale=new Vector3(transform.localScale.x + deltamove, transform.localScale.y + deltamove, transform.localScale.z + deltamove);
-                        }
+                        float deltamove = SizeScale * (Vector3.Distance(pos1, pos2) - deltadistace);
+                        Vector3 bufscale = transform.localScale;
+                        bool setflag = false;
+                        if (X == false) bufscale.x = SetDeltaScale( out setflag, bufscale.x, deltamove);
+                        if (Y == false) bufscale.y = SetDeltaScale( out setflag, bufscale.y, deltamove);
+                        if (Z == false) bufscale.z = SetDeltaScale( out setflag, bufscale.z, deltamove);
+                        if (setflag == false) transform.localScale = bufscale;
                         deltadistace = Vector3.Distance(pos1, pos2);
                     }
                     break;
             }
+        }
+
+        private float SetDeltaScale(out bool setflag, float scale, float deltamove)
+        {
+            float buf = scale;
+            if (deltamove > 0) buf *= deltamove + 1.0f;
+            else buf /= (-deltamove) + 1.0f;
+            if (buf < MinScale) setflag = true;
+            else setflag = false;
+            return buf;
         }
 
         public void FocusEnter() { focusflag = true; }

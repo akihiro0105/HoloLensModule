@@ -10,59 +10,37 @@ namespace HoloLensModule.Input
         public float maxDistance = 30.0f;
 
         private GameObject bufobj = null;
-        private FocusInterface[] focus;
         private RaycastHit info;
-        // Use this for initialization
-        void Start()
+        private FocusInterface[] fs;
+
+        void FixedUpdate()
         {
-            
+            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out info, maxDistance)) FocusInterfaceObject(info.transform.gameObject);
+            else FocusInterfaceObject(null);
         }
 
-        // Update is called once per frame
-        void Update()
+        private void FocusInterfaceObject(GameObject obj)
         {
-            
-        }
-
-        private void FixedUpdate()
-        {
-            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out info, maxDistance))
+            if (obj == null) SetFocusEnd();
+            else
             {
-                GameObject buf = GetFocusInterface(info.transform.gameObject);
-                if (buf != null)
-                {
-                    if (bufobj == null)
-                    {
-                        focus = buf.GetComponents<FocusInterface>();
-                        for (int i = 0; i < focus.Length; i++) focus[i].FocusEnter();
-                        bufobj = buf;
-                    }
-                    else if (buf != bufobj)
-                    {
-                        focus = bufobj.GetComponents<FocusInterface>();
-                        for (int i = 0; i < focus.Length; i++) focus[i].FocusEnd();
-                        focus = buf.GetComponents<FocusInterface>();
-                        for (int i = 0; i < focus.Length; i++) focus[i].FocusEnter();
-                        bufobj = buf;
-                    }
-                }
+                if (obj.GetComponent<FocusInterface>() == null) FocusInterfaceObject(obj.transform.parent.gameObject);
                 else
                 {
-                    if (bufobj != null)
-                    {
-                        focus = bufobj.GetComponents<FocusInterface>();
-                        for (int i = 0; i < focus.Length; i++) focus[i].FocusEnd();
-                        bufobj = null;
-                    }
+                    if (bufobj != obj) SetFocusEnd();
+                    fs = obj.GetComponents<FocusInterface>();
+                    for (int i = 0; i < fs.Length; i++) fs[i].FocusEnter();
+                    bufobj = obj;
                 }
             }
         }
 
-        private GameObject GetFocusInterface(GameObject obj)
+        private void SetFocusEnd()
         {
-            if (obj == null) return null;
-            if (obj.GetComponent<FocusInterface>() != null) return obj;
-            else return GetFocusInterface(obj.transform.parent.gameObject);
+            if (bufobj == null) return;
+            fs = bufobj.GetComponents<FocusInterface>();
+            if (fs != null) for (int i = 0; i < fs.Length; i++) fs[i].FocusEnd();
+            bufobj = null;
         }
     }
 

@@ -7,7 +7,7 @@ namespace HoloLensModule
     // Scene遷移後も保持しておきたいオブジェクトを登録
     public class BaseSceneFunction : HoloLensModuleSingleton<BaseSceneFunction>
     {
-        public List<GameObject> BaseObjects = new List<GameObject>();// BaseSceneFunction以下のオブジェクト以外は登録
+        public List<GameObject> BaseObjects = new List<GameObject>();// BaseSceneFunction以下のオブジェクト以外は登録が必要
 
         private static bool createFlag = false;
 

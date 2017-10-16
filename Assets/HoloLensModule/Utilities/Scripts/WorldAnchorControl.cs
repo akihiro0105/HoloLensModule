@@ -25,7 +25,19 @@ namespace HoloLensModule
         void Start()
         {
 #if UNITY_EDITOR || UNITY_UWP
-            WorldAnchorStore.GetAsync(onCompleted);
+            WorldAnchorStore.GetAsync((store)=> {
+                anchorstore = store;
+                string[] ids = anchorstore.GetAllIds();
+                for (int i = 0; i < ids.Length; i++)
+                {
+                    if (ids[i] == gameObject.name)
+                    {
+                        anchorstore.Load(gameObject.name, gameObject);
+                        break;
+                    }
+                }
+                if (SetOnAwake) SetWorldAnchor();
+            });
 #endif
         }
 
@@ -33,23 +45,6 @@ namespace HoloLensModule
         {
             if (DestroyAnchorClear) DeleteWorldAnchor();
         }
-
-#if UNITY_EDITOR || UNITY_UWP
-        private void onCompleted(WorldAnchorStore store)
-        {
-            anchorstore = store;
-            string[] ids = anchorstore.GetAllIds();
-            for (int i = 0; i < ids.Length; i++)
-            {
-                if (ids[i] == gameObject.name)
-                {
-                    anchorstore.Load(gameObject.name, gameObject);
-                    break;
-                }
-            }
-            if (SetOnAwake) SetWorldAnchor();
-        }
-#endif
 
         public void SetWorldAnchor()
         {
@@ -59,10 +54,7 @@ namespace HoloLensModule
             {
                 WorldAnchor worldanchor = gameObject.AddComponent<WorldAnchor>();
                 worldanchor.name = gameObject.name;
-                if (worldanchor.isLocated)
-                {
-                    anchorstore.Save(worldanchor.name, worldanchor);
-                }
+                if (worldanchor.isLocated) anchorstore.Save(worldanchor.name, worldanchor);
                 else worldanchor.OnTrackingChanged += OnTrackingChanged;
             }
 #endif
@@ -98,10 +90,7 @@ namespace HoloLensModule
         public void AllClearWorldAnchor()
         {
 #if UNITY_EDITOR || UNITY_UWP
-            if (anchorstore!=null)
-            {
-                anchorstore.Clear();
-            }
+            if (anchorstore != null) anchorstore.Clear();
 #endif
         }
     }
