@@ -20,7 +20,7 @@ namespace HoloLensModule.Input
         {
             boxcollider = GetComponent<BoxCollider>();
             if (boxcollider == null) boxcollider = gameObject.AddComponent<BoxCollider>();
-             linerenderer = GetComponent<LineRenderer>();
+            linerenderer = GetComponent<LineRenderer>();
             if (linerenderer == null) linerenderer = gameObject.AddComponent<LineRenderer>();
             linerenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             linerenderer.receiveShadows = false;
@@ -28,18 +28,21 @@ namespace HoloLensModule.Input
             linerenderer.material = LineMaterial;
             linerenderer.useWorldSpace = false;
             linerenderer.positionCount = 0;
+            isActive(false, true);
             if (isAwake) isActive(true);
         }
 
-        public void isActive(bool flag)
+        public void isActive(bool flag, bool isBoxCal = false)
         {
-            if (flag)
+            if (isBoxCal)
             {
                 Bounds bounds;
                 MeshFilterBounds(gameObject, out bounds);
                 boxcollider.center = bounds.center;
                 boxcollider.size = bounds.size;
-
+            }
+            if (flag)
+            {
                 linepoint[0].Set(boxcollider.center.x + boxcollider.size.x / 2, boxcollider.center.y - boxcollider.size.y / 2, boxcollider.center.z + boxcollider.size.z / 2);
                 linepoint[1].Set(boxcollider.center.x + boxcollider.size.x / 2, boxcollider.center.y + boxcollider.size.y / 2, boxcollider.center.z + boxcollider.size.z / 2);
                 linepoint[2].Set(boxcollider.center.x - boxcollider.size.x / 2, boxcollider.center.y + boxcollider.size.y / 2, boxcollider.center.z + boxcollider.size.z / 2);
@@ -62,39 +65,45 @@ namespace HoloLensModule.Input
             else linerenderer.positionCount = 0;
         }
 
-        private bool MeshFilterBounds(GameObject obj,out Bounds outBounds)
+        private bool MeshFilterBounds(GameObject obj, out Bounds outBounds)
         {
             Bounds bound = new Bounds();
             bool initFlag = false;
-
-            MeshFilter filter = obj.GetComponent<MeshFilter>();
-            Matrix4x4 mat = Matrix4x4.TRS(obj.transform.localPosition, obj.transform.localRotation, obj.transform.localScale);
-            if (filter)
-            {
-                Vector3 center = mat.MultiplyPoint(filter.mesh.bounds.center);
-                Vector3 size = mat.MultiplyVector(filter.mesh.bounds.size);
-                size.Set(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
-                if (initFlag == false)
-                {
-                    bound.center = center;
-                    bound.size = size;
-                    initFlag = true;
-                }
-                else bound.Encapsulate(new Bounds(center, size));
-            }
             Bounds buf;
+
             for (int i = 0; i < obj.transform.childCount; i++)
             {
-                if (MeshFilterBounds(obj.transform.GetChild(i).gameObject,out buf))
+                GameObject objchild = obj.transform.GetChild(i).gameObject;
+                MeshFilter filter = objchild.GetComponent<MeshFilter>();
+                Matrix4x4 mat = Matrix4x4.TRS(objchild.transform.localPosition, objchild.transform.localRotation, objchild.transform.localScale);
+                if (filter)
                 {
+                    Vector3 center = mat.MultiplyPoint(filter.mesh.bounds.center);
+                    Vector3 size = mat.MultiplyVector(filter.mesh.bounds.size);
+                    size.Set(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
                     if (initFlag == false)
                     {
-                        bound = buf;
+                        bound.center = center;
+                        bound.size = size;
                         initFlag = true;
                     }
-                    else bound.Encapsulate(buf);
+                    else bound.Encapsulate(new Bounds(center, size));
+                }
+                if (MeshFilterBounds(objchild, out buf))
+                {
+                    Vector3 center = mat.MultiplyPoint(buf.center);
+                    Vector3 size = mat.MultiplyVector(buf.size);
+                    size.Set(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z));
+                    if (initFlag == false)
+                    {
+                        bound.center = center;
+                        bound.size = size;
+                        initFlag = true;
+                    }
+                    else bound.Encapsulate(new Bounds(center, size));
                 }
             }
+
             outBounds = bound;
             return initFlag;
         }
