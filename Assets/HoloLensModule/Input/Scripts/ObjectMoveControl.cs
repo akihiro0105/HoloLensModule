@@ -6,57 +6,34 @@ using UnityEngine;
 namespace HoloLensModule.Input
 {
     // オブジェクトの移動
-    public class ObjectMoveControl : MonoBehaviour, FocusInterface
+    public class ObjectMoveControl : MonoBehaviour
     {
         public bool LookAt = false;
         [Range(0.1f, 10.0f)]
         public float MoveScale = 1.0f;
 
-        private bool focusflag = false;
-        private bool dragflag = false;
         private Vector3 deltapos;
-
-        // Use this for initialization
+        private DragGestureEvent dragevent;
         void Start()
         {
-            HandsGestureManager.ReleaseHandGestureEvent += ReleaseHandGestureEvent;
-            HandsGestureManager.SingleHandGestureEvent += SingleHandGestureEvent;
+            dragevent = gameObject.AddComponent<DragGestureEvent>();
+            dragevent.ActionState = HandsGestureManager.HandGestureState.Drag;
+            dragevent.DragStartActionEvent.AddListener(GestureStart);
+            dragevent.DragUpdateActionEvent.AddListener(GestureUpdate);
         }
 
         void OnDestroy()
         {
-            HandsGestureManager.ReleaseHandGestureEvent -= ReleaseHandGestureEvent;
-            HandsGestureManager.SingleHandGestureEvent -= SingleHandGestureEvent;
+            dragevent.DragStartActionEvent.RemoveListener(GestureStart);
+            dragevent.DragUpdateActionEvent.RemoveListener(GestureUpdate);
         }
 
-        private void ReleaseHandGestureEvent(HandsGestureManager.HandGestureState state) { dragflag = false; }
-
-        private void SingleHandGestureEvent(HandsGestureManager.HandGestureState state, Vector3 pos)
+        public void GestureStart(Vector3 pos1, Vector3? pos2) { deltapos = pos1; }
+        public void GestureUpdate(Vector3 pos1, Vector3? pos2)
         {
-            switch (state)
-            {
-                case HandsGestureManager.HandGestureState.DragStart:
-                    if (focusflag)
-                    {
-                        deltapos = pos;
-                        dragflag = true;
-                    }
-                    break;
-                case HandsGestureManager.HandGestureState.Drag:
-                    if (dragflag)
-                    {
-                        transform.position += MoveScale * (pos - deltapos);
-                        deltapos = pos;
-                        if (LookAt) transform.LookAt(Camera.main.transform.position);
-                    }
-                    break;
-            }
+            transform.position += MoveScale * (pos1 - deltapos);
+            deltapos = pos1;
+            if (LookAt) transform.LookAt(Camera.main.transform.position);
         }
-
-        public void FocusEnter() { focusflag = true; }
-
-        public void FocusEnd() { focusflag = false; }
-
-        public bool isMove() { return dragflag; }
     }
 }

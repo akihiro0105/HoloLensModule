@@ -5,56 +5,34 @@ using UnityEngine;
 namespace HoloLensModule.Input
 {
     // オブジェクトの回転
-    public class ObjectRotationControl : MonoBehaviour, FocusInterface
+    public class ObjectRotationControl : MonoBehaviour
     {
         [Range(1.0f, 100.0f)]
         public float RotationScale = 20.0f;
 
-        private bool focusflag = false;
-        private bool dragflag = false;
         private Vector3 deltapos;
+        private DragGestureEvent dragevent;
 
-        // Use this for initialization
         void Start()
         {
-            HandsGestureManager.ReleaseHandGestureEvent += ReleaseHandGestureEvent;
-            HandsGestureManager.SingleHandGestureEvent += SingleHandGestureEvent;
+            dragevent = gameObject.AddComponent<DragGestureEvent>();
+            dragevent.ActionState = HandsGestureManager.HandGestureState.ShiftDrag;
+            dragevent.DragStartActionEvent.AddListener(GestureStart);
+            dragevent.DragUpdateActionEvent.AddListener(GestureUpdate);
         }
 
         void OnDestroy()
         {
-            HandsGestureManager.ReleaseHandGestureEvent -= ReleaseHandGestureEvent;
-            HandsGestureManager.SingleHandGestureEvent -= SingleHandGestureEvent;
+            dragevent.DragStartActionEvent.RemoveListener(GestureStart);
+            dragevent.DragUpdateActionEvent.RemoveListener(GestureUpdate);
         }
 
-        private void ReleaseHandGestureEvent(HandsGestureManager.HandGestureState state) { dragflag = false; }
-
-        private void SingleHandGestureEvent(HandsGestureManager.HandGestureState state, Vector3 pos)
+        public void GestureStart(Vector3 pos1, Vector3? pos2) { deltapos = Camera.main.transform.InverseTransformPoint(pos1); }
+        public void GestureUpdate(Vector3 pos1, Vector3? pos2)
         {
-            switch (state)
-            {
-                case HandsGestureManager.HandGestureState.ShiftDragStart:
-                    if (focusflag)
-                    {
-                        deltapos = Camera.main.transform.TransformPoint(pos);
-                        dragflag = true;
-                    }
-                    break;
-                case HandsGestureManager.HandGestureState.ShiftDrag:
-                    if (dragflag)
-                    {
-                        Vector3 deltamove = Camera.main.transform.TransformPoint(pos) - deltapos;
-                        transform.rotation = transform.rotation * Quaternion.AngleAxis(-deltamove.x * RotationScale * 10.0f, transform.up);
-                        deltapos = Camera.main.transform.TransformPoint(pos);
-                    }
-                    break;
-            }
+            Vector3 deltamove = Camera.main.transform.InverseTransformPoint(pos1) - deltapos;
+            transform.rotation = transform.rotation * Quaternion.AngleAxis(-deltamove.x * RotationScale * 10.0f, transform.up);
+            deltapos = Camera.main.transform.InverseTransformPoint(pos1);
         }
-
-        public void FocusEnter() { focusflag = true; }
-
-        public void FocusEnd() { focusflag = false; }
-
-        public bool isMove() { return dragflag; }
     }
 }

@@ -1,12 +1,11 @@
-﻿using UnityEngine;
-using System;
-using System.Text;
+﻿using System;
 #if UNITY_UWP
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Networking;
 using Windows.Networking.Sockets;
 #elif UNITY_EDITOR || UNITY_STANDALONE
+using System.Text;
 using System.Threading;
 using System.Net.Sockets;
 #endif
@@ -22,10 +21,8 @@ namespace HoloLensModule.Network
         public ReceiveMessageHandler ReceiveMessage;
 
 #if UNITY_UWP
-        private Stream streamOut = null;
-        private string errorstring = "";
+        private StreamWriter writer = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private Thread thread = null;
         private NetworkStream stream = null;
 #endif
         private bool ConnectFlag = false;
@@ -36,31 +33,45 @@ namespace HoloLensModule.Network
 #if UNITY_UWP
             Task.Run(async () => {
                 StreamSocket socket = new StreamSocket();
-                HostName serverhost = new HostName(IP);
-                await socket.ConnectAsync(serverhost, port.ToString());
-                streamOut = socket.OutputStream.AsStreamForWrite();
-                Stream streamIn = socket.InputStream.AsStreamForRead();
-                //streamIn.ReadTimeout = 100;
+                await socket.ConnectAsync(new HostName(IP),port.ToString());
+                writer = new StreamWriter(socket.OutputStream.AsStreamForWrite());
+                StreamReader reader = new StreamReader(socket.InputStream.AsStreamForRead());
+                reader.BaseStream.ReadTimeout = 100;
                 if (ConnectMessage != null) ConnectMessage();
                 while (ConnectFlag)
                 {
                     try
                     {
-                        byte[] bytes = new byte[2048];
-                        await streamIn.ReadAsync(bytes, 0, bytes.Length);
-                        string data = Encoding.UTF8.GetString(bytes);
+                        string data = await reader.ReadToEndAsync();
                         if (ReceiveMessage != null) ReceiveMessage(data);
                     }
                     catch (Exception) { }
                 }
                 if (DisconnectMessage != null) DisconnectMessage();
-                if (streamOut != null) streamOut.Dispose();
-                streamOut = null;
+                if(writer!=null) writer.Dispose();
+                writer = null;
             });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            TcpClient tcp = new TcpClient(IP, port);
-            thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
-            thread.Start(tcp);
+            Thread thread = new Thread(()=> {
+                TcpClient tcp = new TcpClient(IP, port);
+                tcp.ReceiveTimeout = 100;
+                stream = tcp.GetStream();
+                if (ConnectMessage != null) ConnectMessage();
+                while (ConnectFlag)
+                {
+                    try
+                    {
+                        byte[] bytes = new byte[tcp.ReceiveBufferSize];
+                        stream.Read(bytes, 0, bytes.Length);
+                        if (ReceiveMessage != null) ReceiveMessage(Encoding.UTF8.GetString(bytes));
+                    }
+                    catch (Exception) { }
+                }
+                stream.Close();
+                tcp.Close();
+                if (DisconnectMessage != null) DisconnectMessage();
+            });
+            thread.Start();
 #endif
         }
 
@@ -68,57 +79,29 @@ namespace HoloLensModule.Network
         {
             ConnectFlag = false;
 #if UNITY_UWP
-            if (streamOut != null) streamOut.Dispose();
-            streamOut = null;
+            if (writer != null) writer.Dispose();
+            writer = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            thread.Abort();
             stream = null;
-            thread = null;
 #endif
         }
 
         public void SendMessage(string data)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(data);
 #if UNITY_UWP
-            if (streamOut != null) Task.Run(async () =>
+            if (writer != null) Task.Run(async () =>
              {
-                 await streamOut.WriteAsync(bytes, 0, bytes.Length);
-                 await streamOut.FlushAsync();
+                 await writer.WriteAsync(data);
+                 await writer.FlushAsync();
              });
 #elif UNITY_EDITOR || UNITY_STANDALONE
             if (stream != null)
             {
+                byte[] bytes = Encoding.UTF8.GetBytes(data);
                 Thread sendthread = new Thread(()=> { stream.Write(bytes, 0, bytes.Length); });
                 sendthread.Start();
             }
 #endif
         }
-
-#if UNITY_UWP
-#elif UNITY_EDITOR || UNITY_STANDALONE
-        private void ThreadProcess(object obj)
-        {
-            TcpClient tcp = (TcpClient)obj;
-            tcp.ReceiveTimeout = 100;
-            stream = tcp.GetStream();
-            Debug.Log("Connect Client");
-            if (ConnectMessage != null) ConnectMessage();
-            while (ConnectFlag)
-            {
-                try
-                {
-                    byte[] bytes = new byte[tcp.ReceiveBufferSize];
-                    stream.Read(bytes, 0, bytes.Length);
-                    string data = Encoding.UTF8.GetString(bytes);
-                    if (ReceiveMessage != null) ReceiveMessage(data);
-                }
-                catch (Exception) { }
-            }
-            stream.Close();
-            tcp.Close();
-            if (DisconnectMessage != null) DisconnectMessage();
-        }
-#endif
     }
 }

@@ -1,13 +1,12 @@
-﻿using System;
+﻿using System.Net;
 #if UNITY_UWP
+using System;
 using System.IO;
-using System.Net;
 using System.Threading.Tasks;
 using Windows.Networking;
 using Windows.Networking.Sockets;
 #elif UNITY_EDITOR || UNITY_STANDALONE
 using System.Threading;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
 #endif
@@ -19,23 +18,26 @@ namespace HoloLensModule.Network
 #if UNITY_UWP
         private StreamWriter writer=null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
+        private Thread thread;
         private UdpClient udpclient;
 #endif
 
-        public UdpNetworkClientManager(int port)
+        public UdpNetworkClientManager(int port,string address=null)
         {
 #if UNITY_UWP
             Task.Run(async () =>
              {
                  DatagramSocket socket = new DatagramSocket();
-                 HostName hostname = new HostName(IPAddress.Broadcast.ToString());
-                Stream streamOut = (await socket.GetOutputStreamAsync(hostname, port.ToString())).AsStreamForWrite();
-                writer=new StreamWriter(streamOut);
+                 string Address = address;
+                 if (address == null) Address = IPAddress.Broadcast.ToString();
+                 var datagram = await socket.GetOutputStreamAsync(new HostName(Address), port.ToString());
+                 writer = new StreamWriter(datagram.AsStreamForWrite());
              });
 #elif UNITY_EDITOR || UNITY_STANDALONE
             udpclient = new UdpClient();
             udpclient.EnableBroadcast = true;
-            udpclient.Connect(new IPEndPoint(IPAddress.Broadcast, port));
+            if(address==null) udpclient.Connect(new IPEndPoint(IPAddress.Broadcast, port));
+            else udpclient.Connect(address, port);
 #endif
         }
 
@@ -56,19 +58,13 @@ namespace HoloLensModule.Network
                  await writer.FlushAsync();
              });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            Thread thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
-            thread.Start(data);
+            thread = new Thread(() =>
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(data);
+                udpclient.Send(bytes, bytes.Length);
+            });
+            thread.Start();
 #endif
         }
-
-#if UNITY_UWP
-#elif UNITY_EDITOR || UNITY_STANDALONE
-        private void ThreadProcess(object obj)
-        {
-            string data = (string)obj;
-            byte[] bytes = Encoding.UTF8.GetBytes(data);
-            udpclient.Send(bytes, bytes.Length);
-        }
-#endif
     }
 }
