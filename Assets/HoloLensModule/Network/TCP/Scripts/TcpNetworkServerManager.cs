@@ -1,11 +1,13 @@
-﻿using UnityEngine;
-using System;
-#if UNITY_UWP
-        
-#elif UNITY_EDITOR || UNITY_STANDALONE
+﻿using System;
 using System.Collections.Generic;
-using System.Threading;
+#if UNITY_UWP
+using System.IO;
+using System.Threading.Tasks;
+using Windows.Networking.Sockets;
+using Windows.Storage.Streams;
+#elif UNITY_EDITOR || UNITY_STANDALONE
 using System.Net;
+using System.Threading;
 using System.Net.Sockets;
 using System.Text;
 #endif
@@ -16,77 +18,89 @@ namespace HoloLensModule.Network
     {
 
 #if UNITY_UWP
-        
+        private StreamSocketListener streamsocketlistener;
+        private List<StreamWriter> writer = new List<StreamWriter>();
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private TcpListener tcpserver;
-        private List<Thread> threads = new List<Thread>();
         private List<NetworkStream> streams = new List<NetworkStream>();
-        private bool ListenFlag = false;
 #endif
+        private bool ListenFlag = false;
 
         public TcpNetworkServerManager(int port)
         {
-#if UNITY_EDITOR || UNITY_STANDALONE
-            Debug.Log("Server Start");
-            tcpserver = new TcpListener(IPAddress.Any, port);
-            tcpserver.Start();
             ListenFlag = true;
-            Thread thread = new Thread(ThreadProcess);
-            thread.Start();
-            threads.Add(thread);
+#if UNITY_UWP
+            Task.Run(async()=>{
+                streamsocketlistener = new StreamSocketListener();
+                streamsocketlistener.ConnectionReceived += ConnectionReceived;
+                await streamsocketlistener.BindServiceNameAsync(port.ToString());
+            });
+#elif UNITY_EDITOR || UNITY_STANDALONE
+            TcpListener tcpserver = new TcpListener(IPAddress.Any, port);
+            tcpserver.Start();
+            Thread listenerthread = new Thread(() =>
+            {
+                while (ListenFlag)
+                {
+                    TcpClient tcpclient = tcpserver.AcceptTcpClient();
+                    tcpclient.ReceiveTimeout = 100;
+                    Thread thread = new Thread(() =>
+                    {
+                        NetworkStream stream = tcpclient.GetStream();
+                        streams.Add(stream);
+                        while (ListenFlag)
+                        {
+                            try
+                            {
+                                byte[] bytes = new byte[tcpclient.ReceiveBufferSize];
+                                stream.Read(bytes, 0, bytes.Length);
+                                for (int i = 0; i < streams.Count; i++) if (streams[i].CanWrite) streams[i].Write(bytes, 0, bytes.Length);
+                            }
+                            catch (Exception) { }
+                            if (tcpclient.Client.Poll(1000, SelectMode.SelectRead) && tcpclient.Client.Available == 0) break;
+                        }
+                        stream.Close();
+                        tcpclient.Close();
+                    });
+                    thread.Start();
+                }
+                tcpserver.Stop();
+            });
+            listenerthread.Start();
 #endif
         }
 
         public void DeleteManager()
         {
-#if UNITY_EDITOR || UNITY_STANDALONE
-            Debug.Log("Server Stop");
             ListenFlag = false;
-            for (int i = 0; i < threads.Count; i++) threads[i].Abort();
-            threads.Clear();
-            tcpserver.Stop();
+#if UNITY_UWP
+            writer.Clear();
+            streamsocketlistener.Dispose();
+#elif UNITY_EDITOR || UNITY_STANDALONE
+            streams.Clear();
 #endif
         }
 
-        public void SendMessage(string data)
+#if UNITY_UWP
+        private async void ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
-#if UNITY_EDITOR || UNITY_STANDALONE
-            byte[] bytes = Encoding.UTF8.GetBytes(data);
-            for (int i = 0; i < streams.Count; i++) if (streams[i].CanWrite) streams[i].Write(bytes, 0, bytes.Length);
-#endif
-        }
-
-#if UNITY_EDITOR || UNITY_STANDALONE
-
-        private void ThreadProcess(object obj)
-        {
-            TcpClient tcpclient = tcpserver.AcceptTcpClient();
-            IPEndPoint remote = (IPEndPoint)tcpclient.Client.RemoteEndPoint;
-            string ip = remote.Address.ToString();
-            Debug.Log("Connected " + ip);
-            tcpclient.ReceiveTimeout = 100;
-            NetworkStream stream = tcpclient.GetStream();
-            streams.Add(stream);
-            Thread thread = new Thread(ThreadProcess);
-            thread.Start();
-            threads.Add(thread);
+            StreamReader reader = new StreamReader(args.Socket.InputStream.AsStreamForRead());
+            reader.BaseStream.ReadTimeout = 100;
+            writer.Add(new StreamWriter(args.Socket.OutputStream.AsStreamForWrite()));
             while (ListenFlag)
             {
                 try
                 {
-                    byte[] bytes = new byte[tcpclient.ReceiveBufferSize];
-                    stream.Read(bytes, 0, bytes.Length);
-                    string data = Encoding.UTF8.GetString(bytes);
-                    SendMessage(data);
+                    string data = await reader.ReadToEndAsync();
+                    for (int i = 0; i < writer.Count; i++)
+                    {
+                        await writer[i].WriteAsync(data);
+                        await writer[i].FlushAsync();
+                    }
                 }
                 catch (Exception) { }
-                if (tcpclient.Client.Poll(1000, SelectMode.SelectRead) && tcpclient.Client.Available == 0) break;
             }
-            stream.Close();
-            stream = null;
-            tcpclient.Close();
-            Debug.Log("Disconnected " + ip);
         }
+#elif UNITY_EDITOR || UNITY_STANDALONE
 #endif
     }
 }

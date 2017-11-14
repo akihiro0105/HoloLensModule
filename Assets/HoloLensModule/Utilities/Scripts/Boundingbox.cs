@@ -20,7 +20,7 @@ namespace HoloLensModule.Input
         {
             boxcollider = GetComponent<BoxCollider>();
             if (boxcollider == null) boxcollider = gameObject.AddComponent<BoxCollider>();
-            linerenderer = GetComponent<LineRenderer>();
+             linerenderer = GetComponent<LineRenderer>();
             if (linerenderer == null) linerenderer = gameObject.AddComponent<LineRenderer>();
             linerenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             linerenderer.receiveShadows = false;
@@ -65,7 +65,7 @@ namespace HoloLensModule.Input
             else linerenderer.positionCount = 0;
         }
 
-        private bool MeshFilterBounds(GameObject obj, out Bounds outBounds)
+        private bool MeshFilterBounds(GameObject obj,out Bounds outBounds)
         {
             Bounds bound = new Bounds();
             bool initFlag = false;

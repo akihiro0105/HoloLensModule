@@ -17,7 +17,7 @@ namespace HoloLensModule.Network
         public delegate void UdpNetworkListenEventHandler(string data,string address);
         public UdpNetworkListenEventHandler UdpNetworkListenEvent;
 #if UNITY_UWP
-        private DatagramSocket socket=null;
+        private DatagramSocket socket = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
         private Thread thread = null;
         private bool ListenFlag = false;
@@ -33,9 +33,23 @@ namespace HoloLensModule.Network
                 await socket.BindServiceNameAsync(port.ToString());
              });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            ListenFlag = true;
-            thread = new Thread(new ParameterizedThreadStart(ThreadProcess));
-            thread.Start(port);
+            thread = new Thread(()=> {
+                ListenFlag = true;
+                UdpClient udpclient = new UdpClient(port);
+                udpclient.Client.ReceiveTimeout = 100;
+                IPEndPoint remote = new IPEndPoint(IPAddress.Any, port);
+                while (ListenFlag)
+                {
+                    try
+                    {
+                        byte[] bytes = udpclient.Receive(ref remote);
+                        if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(Encoding.UTF8.GetString(bytes), remote.Address.ToString());
+                    }
+                    catch (Exception) { }
+                }
+                udpclient.Close();
+            });
+            thread.Start();
 #endif
         }
 
@@ -52,30 +66,11 @@ namespace HoloLensModule.Network
 #if UNITY_UWP
         async void MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
         {
-            Stream streamIn = args.GetDataStream().AsStreamForRead();
-            StreamReader reader = new StreamReader(streamIn);
+            StreamReader reader = new StreamReader(args.GetDataStream().AsStreamForRead());
             string data = await reader.ReadLineAsync();
             if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(data, args.RemoteAddress.DisplayName);
         }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private void ThreadProcess(object obj)
-        {
-            int port = (int)obj;
-            UdpClient udpclient = new UdpClient(port);
-            udpclient.Client.ReceiveTimeout = 100;
-            IPEndPoint remote = new IPEndPoint(IPAddress.Any, port);
-            while (ListenFlag)
-            {
-                try
-                {
-                    byte[] bytes = udpclient.Receive(ref remote);
-                    string data = Encoding.UTF8.GetString(bytes);
-                    if (UdpNetworkListenEvent != null) UdpNetworkListenEvent(data, remote.Address.ToString());
-                }
-                catch (Exception) { }
-            }
-            udpclient.Close();
-        }
 #endif
     }
 }

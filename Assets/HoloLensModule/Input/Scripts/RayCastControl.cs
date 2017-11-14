@@ -29,7 +29,7 @@ namespace HoloLensModule.Input
                 {
                     if (bufobj != obj) SetFocusEnd();
                     fs = obj.GetComponents<FocusInterface>();
-                    for (int i = 0; i < fs.Length; i++) fs[i].FocusEnter();
+                    for (int i = 0; i < fs.Length; ++i) fs[i].FocusEnter();
                     bufobj = obj;
                 }
             }
@@ -39,7 +39,7 @@ namespace HoloLensModule.Input
         {
             if (bufobj == null) return;
             fs = bufobj.GetComponents<FocusInterface>();
-            if (fs != null) for (int i = 0; i < fs.Length; i++) fs[i].FocusEnd();
+            if (fs != null) for (int i = 0; i < fs.Length; ++i) fs[i].FocusEnd();
             bufobj = null;
         }
     }

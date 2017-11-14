@@ -6,77 +6,40 @@ using UnityEngine;
 namespace HoloLensModule.Input
 {
     // オブジェクトのサイズ
-    public class ObjectScaleControl : MonoBehaviour, FocusInterface
+    public class ObjectScaleControl : MonoBehaviour
     {
         [Range(0.1f, 10.0f)]
-        public float SizeScale = 2.0f;
-        [Range(0.01f, 1.0f)]
-        public float MinScale = 0.01f;
-        [Header("Lock Vector")]
-        public bool X = false;
-        public bool Y = false;
-        public bool Z = false;
+        public float SizeScale = 1.0f;
+        public float MinSize = 0.001f;
 
-        private bool focusflag = false;
-        private bool dragflag = false;
         private float deltadistace;
+        private DragGestureEvent dragevent;
 
-        // Use this for initialization
         void Start()
         {
-            HandsGestureManager.ReleaseHandGestureEvent += ReleaseHandGestureEvent;
-            HandsGestureManager.MultiHandGestureEvent += MultiHandGestureEvent;
+            dragevent = gameObject.AddComponent<DragGestureEvent>();
+            dragevent.ActionState = HandsGestureManager.HandGestureState.MultiDrag;
+            dragevent.DragStartActionEvent.AddListener(GestureStart);
+            dragevent.DragUpdateActionEvent.AddListener(GestureUpdate);
         }
 
         void OnDestroy()
         {
-            HandsGestureManager.ReleaseHandGestureEvent -= ReleaseHandGestureEvent;
-            HandsGestureManager.MultiHandGestureEvent -= MultiHandGestureEvent;
+            dragevent.DragStartActionEvent.RemoveListener(GestureStart);
+            dragevent.DragUpdateActionEvent.RemoveListener(GestureUpdate);
         }
 
-        private void ReleaseHandGestureEvent(HandsGestureManager.HandGestureState state) { dragflag = false; }
-
-        private void MultiHandGestureEvent(HandsGestureManager.HandGestureState state, Vector3 pos1, Vector3 pos2)
+        public void GestureStart(Vector3 pos1, Vector3? pos2) { deltadistace = Vector3.Distance(pos1, pos2.Value); }
+        public void GestureUpdate(Vector3 pos1, Vector3? pos2)
         {
-            switch (state)
-            {
-                case HandsGestureManager.HandGestureState.MultiDragStart:
-                    if (focusflag)
-                    {
-                        deltadistace = Vector3.Distance(pos1, pos2);
-                        dragflag = true;
-                    }
-                    break;
-                case HandsGestureManager.HandGestureState.MultiDrag:
-                    if (dragflag)
-                    {
-                        float deltamove = SizeScale * (Vector3.Distance(pos1, pos2) - deltadistace);
-                        Vector3 bufscale = transform.localScale;
-                        bool setflag = false;
-                        if (X == false) bufscale.x = SetDeltaScale( out setflag, bufscale.x, deltamove);
-                        if (Y == false) bufscale.y = SetDeltaScale( out setflag, bufscale.y, deltamove);
-                        if (Z == false) bufscale.z = SetDeltaScale( out setflag, bufscale.z, deltamove);
-                        if (setflag == false) transform.localScale = bufscale;
-                        deltadistace = Vector3.Distance(pos1, pos2);
-                    }
-                    break;
-            }
+            float deltamove = SizeScale * (Vector3.Distance(pos1, pos2.Value) - deltadistace);
+            if (deltamove > 0) deltamove = 1.0f + deltamove;
+            else deltamove = 1.0f / (1.0f - deltamove);
+            float min = transform.localScale.x * deltamove;
+            if (transform.localScale.y * deltamove < min) min = transform.localScale.y * deltamove;
+            if (transform.localScale.z * deltamove < min) min = transform.localScale.z * deltamove;
+            if (min > MinSize) transform.localScale *= deltamove;
+            deltadistace = Vector3.Distance(pos1, pos2.Value);
         }
-
-        private float SetDeltaScale(out bool setflag, float scale, float deltamove)
-        {
-            float buf = scale;
-            if (deltamove > 0) buf *= deltamove + 1.0f;
-            else buf /= (-deltamove) + 1.0f;
-            if (buf < MinScale) setflag = true;
-            else setflag = false;
-            return buf;
-        }
-
-        public void FocusEnter() { focusflag = true; }
-
-        public void FocusEnd() { focusflag = false; }
-
-        public bool isMove() { return dragflag; }
     }
 }

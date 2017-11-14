@@ -1,4 +1,9 @@
 ﻿using UnityEngine;
+#if UNITY_2017_2_OR_NEWER
+#if UNITY_UWP
+using UnityEngine.XR.WSA;
+#endif
+#endif
 
 namespace HoloLensModule
 {
@@ -8,6 +13,9 @@ namespace HoloLensModule
         public enum ActiveDeviceModel
         {
             Standalone_or_Editor,
+#if UNITY_2017_2_OR_NEWER
+            ImmersiveDevice,
+#endif
             MRDevice
         }
         [SerializeField]
@@ -17,11 +25,14 @@ namespace HoloLensModule
         void Start()
         {
 #if UNITY_UWP
-            if (ActiveDevice == ActiveDeviceModel.MRDevice) gameObject.SetActive(true);
-            else gameObject.SetActive(false);
+#if UNITY_2017_2_OR_NEWER
+            if (HolographicSettings.IsDisplayOpaque) gameObject.SetActive((ActiveDevice == ActiveDeviceModel.ImmersiveDevice) ? true : false);
+            else gameObject.SetActive((ActiveDevice == ActiveDeviceModel.MRDevice) ? true : false);
+#else
+            gameObject.SetActive((ActiveDevice == ActiveDeviceModel.MRDevice) ? true : false);
+#endif
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (ActiveDevice == ActiveDeviceModel.Standalone_or_Editor) gameObject.SetActive(true);
-            else gameObject.SetActive(false);
+            gameObject.SetActive((ActiveDevice == ActiveDeviceModel.Standalone_or_Editor) ? true : false);
 #endif
         }
     }

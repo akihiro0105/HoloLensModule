@@ -33,6 +33,8 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
     + InputModule.prefab
         * Scene内に一つは位置することで手のトラッキングとジェスチャーの認識を行う
 - Scripts
+    + DragGestureEvent.cs
+        * Drag(Shift,Multi Drag)動作を受け取りイベントを呼び出す
     + HandGestureLog.cs
         * 認識したジェスチャーをConsoleに表示する
     + HandObjectControl.cs
@@ -49,6 +51,8 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
         * オブジェクトのサイズ(Colliderがついているオブジェクトにアタッチ)
     + RayCastControl.cs
         * 視線上のオブジェクトを検出する
+    + TapGestureEvent.cs
+        * Tap(Double Tap, Hold, Shift, Multi)動作を受け取りイベントを呼び出す
 ### Network : TCP,UDP,RestAPIでの通信を行うためのモジュール
 - RestAPI/Scripts
     + RestAPIJsonManager.cs
@@ -69,6 +73,8 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
 - Scripts
     + BaseSceneFunction.cs
         * シーン変更時に指定のオブジェクトを削除しないようにする
+    + BodyLockObject.cs
+        * オブジェクトをBodylock(常に視線の先に遅れて追従する)の状態にする
     + Boundingbox.cs
         * MeshFilterのあるGameObjectに対してフレームとBoxColliderを付与
     + DebugConsole.cs
@@ -77,6 +83,8 @@ youtube : [HoloLensModule](https://youtu.be/VPHf6SsW9BA)
         * 特定のデバイス(HoloLens or Desktop)のみでオブジェクトを有効にさせる
     + HoloLensModuleSingleton.cs
         * シングルトン
+    + SkyboxControl.cs
+        * HoloLensとImmersiveとEditorの背景を分ける(Unity 2017.2から有効)
     + WorldAnchorControl.cs
         * ワールドアンカー制御
 
