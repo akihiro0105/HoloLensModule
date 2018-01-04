@@ -26,10 +26,18 @@ namespace HoloLensModule.Input
             public uint id;
             public bool press = false;
             public Vector3 pos;
-            public HandPointClass(uint id,Vector3 pos)
+            // Immersive Only
+            public Quaternion rot;
+            public float select=0.0f;
+            public Vector2? touchpad = null;
+            public Vector2 stick;
+            public bool grip=false;
+            public bool menu=false;
+            public HandPointClass(uint id, Vector3 pos, Quaternion? rot=null)
             {
                 this.id = id;
                 this.pos = pos;
+                this.rot = rot.Value;
             }
         }
         private List<HandPointClass> HandPointList = new List<HandPointClass>();
@@ -165,9 +173,11 @@ namespace HoloLensModule.Input
         void SourceDetected(InteractionSourceDetectedEventArgs state)
         {
             Vector3 v;
+            Quaternion r;
             if (state.state.sourcePose.TryGetPosition(out v) == true)
             {
-                HandPointList.Add(new HandPointClass(state.state.source.id, v));
+                state.state.sourcePose.TryGetRotation(out r);
+                HandPointList.Add(new HandPointClass(state.state.source.id, v, r));
                 if (onDetected != null) onDetected(HandPointList[HandPointList.Count - 1]);
             }
         }
@@ -175,13 +185,22 @@ namespace HoloLensModule.Input
         void SourceUpdated(InteractionSourceUpdatedEventArgs state)
         {
             Vector3 v;
+            Quaternion r;
             if (state.state.sourcePose.TryGetPosition(out v) == true)
             {
+                state.state.sourcePose.TryGetRotation(out r);
                 for (int i = 0; i < HandPointList.Count; i++)
                 {
                     if (HandPointList[i].id == state.state.source.id)
                     {
                         HandPointList[i].pos = v;
+                        HandPointList[i].rot = r;
+                        HandPointList[i].select = state.state.selectPressedAmount;
+                        HandPointList[i].stick = state.state.thumbstickPosition;
+                        if (state.state.touchpadTouched == true) HandPointList[i].touchpad = state.state.touchpadPosition;
+                        else HandPointList[i].touchpad = null;
+                        HandPointList[i].menu = state.state.menuPressed;
+                        HandPointList[i].grip = state.state.grasped;
                         if (onUpdated != null) onUpdated(HandPointList[i]);
                         break;
                     }
@@ -205,14 +224,23 @@ namespace HoloLensModule.Input
         void SourcePressed(InteractionSourcePressedEventArgs state)
         {
             Vector3 v;
+            Quaternion r;
             if (state.state.sourcePose.TryGetPosition(out v) == true)
             {
+                state.state.sourcePose.TryGetRotation(out r);
                 for (int i = 0; i < HandPointList.Count; i++)
                 {
                     if (HandPointList[i].id == state.state.source.id)
                     {
                         HandPointList[i].press = true;
                         HandPointList[i].pos = v;
+                        HandPointList[i].rot = r;
+                        HandPointList[i].select = state.state.selectPressedAmount;
+                        HandPointList[i].stick = state.state.thumbstickPosition;
+                        if (state.state.touchpadTouched == true) HandPointList[i].touchpad = state.state.touchpadPosition;
+                        else HandPointList[i].touchpad = null;
+                        HandPointList[i].menu = state.state.menuPressed;
+                        HandPointList[i].grip = state.state.grasped;
                         if (onPressed != null) onPressed(HandPointList[i]);
                         break;
                     }
@@ -223,14 +251,23 @@ namespace HoloLensModule.Input
         void SourceReleased(InteractionSourceReleasedEventArgs state)
         {
             Vector3 v;
+            Quaternion r;
             if (state.state.sourcePose.TryGetPosition(out v) == true)
             {
+                state.state.sourcePose.TryGetRotation(out r);
                 for (int i = 0; i < HandPointList.Count; i++)
                 {
                     if (HandPointList[i].id == state.state.source.id)
                     {
                         HandPointList[i].press = false;
                         HandPointList[i].pos = v;
+                        HandPointList[i].rot = r;
+                        HandPointList[i].select = state.state.selectPressedAmount;
+                        HandPointList[i].stick = state.state.thumbstickPosition;
+                        if (state.state.touchpadTouched == true) HandPointList[i].touchpad = state.state.touchpadPosition;
+                        else HandPointList[i].touchpad = null;
+                        HandPointList[i].menu = state.state.menuPressed;
+                        HandPointList[i].grip = state.state.grasped;
                         if (onReleased != null) onReleased(HandPointList[i]);
                         break;
                     }

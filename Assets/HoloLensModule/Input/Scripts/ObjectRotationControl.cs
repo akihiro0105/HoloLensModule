@@ -1,6 +1,9 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_2017_2_OR_NEWER
+using UnityEngine.XR.WSA;
+#endif
 
 namespace HoloLensModule.Input
 {
@@ -16,7 +19,12 @@ namespace HoloLensModule.Input
         void Start()
         {
             dragevent = gameObject.AddComponent<DragGestureEvent>();
+#if !UNITY_2017_2_OR_NEWER
             dragevent.ActionState = HandsGestureManager.HandGestureState.ShiftDrag;
+#else
+            if (HolographicSettings.IsDisplayOpaque) dragevent.HandState = HandControllerManager.HandControllerState.GripDrag;
+            else dragevent.ActionState = HandsGestureManager.HandGestureState.ShiftDrag;
+#endif
             dragevent.DragStartActionEvent.AddListener(GestureStart);
             dragevent.DragUpdateActionEvent.AddListener(GestureUpdate);
         }

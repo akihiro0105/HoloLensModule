@@ -1,38 +1,40 @@
 ﻿using UnityEngine;
-#if UNITY_2017_2_OR_NEWER
-#if UNITY_UWP
-using UnityEngine.XR.WSA;
-#endif
-#endif
 
 namespace HoloLensModule
 {
     // HoloLens or DeskTopのみでアクティブにする
     public class DeviceActiveControl : MonoBehaviour
     {
+        [SerializeField]
         public enum ActiveDeviceModel
         {
-            Standalone_or_Editor,
-#if UNITY_2017_2_OR_NEWER
-            ImmersiveDevice,
-#endif
+            Standalone,
             MRDevice
         }
-        [SerializeField]
-        public ActiveDeviceModel ActiveDevice = ActiveDeviceModel.Standalone_or_Editor;
+        
+        public ActiveDeviceModel ActiveDevice = ActiveDeviceModel.Standalone;
 
         // Use this for initialization
         void Start()
         {
-#if UNITY_UWP
-#if UNITY_2017_2_OR_NEWER
-            if (HolographicSettings.IsDisplayOpaque) gameObject.SetActive((ActiveDevice == ActiveDeviceModel.ImmersiveDevice) ? true : false);
-            else gameObject.SetActive((ActiveDevice == ActiveDeviceModel.MRDevice) ? true : false);
+#if UNITY_EDITOR
+            if (UnityEditor.EditorUserBuildSettings.activeBuildTarget== UnityEditor.BuildTarget.WSAPlayer)
+            {
+                gameObject.SetActive((ActiveDevice == ActiveDeviceModel.MRDevice) ? true : false);
+            }
+            else if (UnityEditor.EditorUserBuildSettings.activeBuildTarget == UnityEditor.BuildTarget.StandaloneWindows64)
+            {
+                gameObject.SetActive((ActiveDevice == ActiveDeviceModel.Standalone) ? true : false);
+            }
 #else
-            gameObject.SetActive((ActiveDevice == ActiveDeviceModel.MRDevice) ? true : false);
-#endif
-#elif UNITY_EDITOR || UNITY_STANDALONE
-            gameObject.SetActive((ActiveDevice == ActiveDeviceModel.Standalone_or_Editor) ? true : false);
+            if (Application.platform == RuntimePlatform.WSAPlayerX86 || Application.platform == RuntimePlatform.WSAPlayerX64)
+            {
+                gameObject.SetActive((ActiveDevice == ActiveDeviceModel.MRDevice) ? true : false);
+            }
+            else if (Application.platform == RuntimePlatform.WindowsPlayer)
+            {
+                gameObject.SetActive((ActiveDevice == ActiveDeviceModel.Standalone) ? true : false);
+            }
 #endif
         }
     }
