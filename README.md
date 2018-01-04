@@ -1,7 +1,7 @@
 # HoloLensModule
 - Windows10 Creators Update
-- Unity 5.6.1
-- Visual Studio 2015
+- Unity 5.6.1,Unity 2017.1.2, Unity 2017.2.0
+- Visual Studio 2015,2017
 ----------
 ## 概要
 HoloLensでハンドジェスチャー及び各種機能を利用するためのツールキットです．
