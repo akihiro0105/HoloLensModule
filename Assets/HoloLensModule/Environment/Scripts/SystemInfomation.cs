@@ -114,12 +114,17 @@ namespace HoloLensModule.Environment
             {
                 byte[] ipb = new byte[4];
                 var ips = IPAddress.Split('.');
-                var masks = Subnetmask.Split('.');
-                for (int i = 0; i < 4; i++)
+                string address = "";
+                if (ips!=null&&ips.Length==4)
                 {
-                    ipb[i] = (byte)(byte.Parse(ips[i]) | ~byte.Parse(masks[i]));
+                    var masks = Subnetmask.Split('.');
+                    for (int i = 0; i < 4; i++)
+                    {
+                        ipb[i] = (byte)(byte.Parse(ips[i]) | ~byte.Parse(masks[i]));
+                    }
+                    address = ipb[0].ToString() + "." + ipb[1].ToString() + "." + ipb[2].ToString() + "." + ipb[3].ToString();
                 }
-                return ipb[0].ToString() + "." + ipb[1].ToString() + "." + ipb[2].ToString() + "." + ipb[3].ToString();
+                return address;
             }
         }
     }
