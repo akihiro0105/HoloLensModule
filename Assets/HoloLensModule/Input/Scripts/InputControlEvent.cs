@@ -157,6 +157,11 @@ namespace HoloLensModule.Input
                 MultiHandFlag = (RightHand.activeSelf == true && LeftHand.activeSelf == true) ? true : false;
                 if (UpdateEvent != null) UpdateEvent();
                 if (rightHandDragInterface != null) rightHandDragInterface.UpdateDrag(RightHand.transform.position);
+                if (RightHand.activeSelf == false && LeftHand.activeSelf == false)
+                {
+                    RightHand.SetActive(true);
+                    RightHand.name = obj.state.source.id.ToString();
+                }
             }
             else
             {

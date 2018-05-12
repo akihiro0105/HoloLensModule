@@ -5,8 +5,28 @@ using UnityEngine.Events;
 
 namespace HoloLensModule.Input
 {
-    public abstract class ButtonControl : MonoBehaviour, IFocusInterface, IClickInterface
+    public class ButtonControl : ButtonControlBaseClass
     {
+        protected override void ClickButton()
+        {
+        }
+
+        protected override void FocusIn()
+        {
+        }
+
+        protected override void FocusOut()
+        {
+        }
+
+        protected override void FocusUpdate()
+        {
+        }
+    }
+
+    public abstract class ButtonControlBaseClass : MonoBehaviour, IFocusInterface, IClickInterface
+    {
+
         public UnityEvent ClickEvent;
 
         private bool isFocus = false;

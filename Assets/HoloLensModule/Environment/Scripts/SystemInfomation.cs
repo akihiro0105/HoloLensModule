@@ -115,7 +115,7 @@ namespace HoloLensModule.Environment
                 byte[] ipb = new byte[4];
                 var ips = IPAddress.Split('.');
                 string address = "";
-                if (ips!=null&&ips.Length==4)
+                if (ips != null && ips.Length == 4)
                 {
                     var masks = Subnetmask.Split('.');
                     for (int i = 0; i < 4; i++)
