@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Net;
 #if UNITY_UWP
 using Windows.Networking.Connectivity;
 using System.Net;
@@ -31,7 +32,14 @@ namespace HoloLensModule.Environment
 #endif
         }
 
-        public static string DeviceName { get { return SystemInfo.deviceName; } }
+        public static string DeviceName
+        {
+            get
+            {
+                return System.Environment.MachineName;
+                //return SystemInfo.deviceName;
+            }
+        }
 
         public static string IPAddress
         {
@@ -51,7 +59,16 @@ namespace HoloLensModule.Environment
                 }
             }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            ipaddress = UnityEngine.Network.player.ipAddress;
+                string hostname = Dns.GetHostName();
+                var address = Dns.GetHostAddresses(hostname);
+                foreach (var item in address)
+                {
+                    if (item.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !item.ToString().StartsWith("172."))
+                    {
+                        ipaddress = item.ToString();
+                    }
+                }
+                //ipaddress = UnityEngine.Network.player.ipAddress;
 #endif
                 return ipaddress;
             }
