@@ -36,8 +36,7 @@ namespace HoloLensModule.Environment
         {
             get
             {
-                return System.Environment.MachineName;
-                //return SystemInfo.deviceName;
+                return SystemInfo.deviceName;
             }
         }
 
