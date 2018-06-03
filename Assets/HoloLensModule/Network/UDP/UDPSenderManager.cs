@@ -8,6 +8,7 @@ using Windows.Networking.Sockets;
 using System.Threading;
 using System.Net.Sockets;
 using System.Text;
+using System;
 #endif
 
 namespace HoloLensModule.Network
@@ -40,12 +41,12 @@ namespace HoloLensModule.Network
                    writer = new StreamWriter(datagram.AsStreamForWrite());
                });
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        if (udpclient == null)
-        {
-            udpclient = new UdpClient();
-            udpclient.EnableBroadcast = true;
-            udpclient.Connect(ipaddress, port);
-        }
+            if (udpclient == null)
+            {
+                udpclient = new UdpClient();
+                udpclient.EnableBroadcast = true;
+                udpclient.Connect(ipaddress, port);
+            }
 #endif
         }
 
@@ -113,16 +114,16 @@ namespace HoloLensModule.Network
 #if UNITY_UWP
             task = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        if (udpclient != null)
-        {
-            udpclient.Close();
-            udpclient = null;
-        }
-        if (thread != null)
-        {
-            thread.Abort();
-            thread = null;
-        }
+            if (udpclient != null)
+            {
+                udpclient.Close();
+                udpclient = null;
+            }
+            if (thread != null)
+            {
+                thread.Abort();
+                thread = null;
+            }
 #endif
         }
     }
