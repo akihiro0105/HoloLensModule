@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace HoloLensModule.Input
 {
-    public class RaycastControl : HoloLensModuleSingleton<RaycastControl>
+    public class RayCastControl : HoloLensModuleSingleton<RayCastControl>
     {
         [SerializeField]
         private GameObject RaycastSourceObject = null;
