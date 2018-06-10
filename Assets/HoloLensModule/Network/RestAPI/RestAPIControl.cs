@@ -39,7 +39,7 @@ namespace HoloLensModule.Network
             }
         }
 
-        public static IEnumerator PostRestAPI(string uri, Dictionary<string, string> value, Action<string> complete, Action<long> error = null, Action<float> progress = null)
+        public static IEnumerator PostRestAPI(string uri, Dictionary<string, string> value, Action<string> complete, Action<long> error = null, Action<float> progress = null, Dictionary<string, string> header = null)
         {
             WWWForm form = new WWWForm();
             foreach (var item in value)
@@ -48,6 +48,13 @@ namespace HoloLensModule.Network
             }
             using (UnityWebRequest www = UnityWebRequest.Post(uri, form))
             {
+                if (header != null)
+                {
+                    foreach (var item in header)
+                    {
+                        www.SetRequestHeader(item.Key, item.Value);
+                    }
+                }
                 www.SendWebRequest();
                 while (www.isDone)
                 {

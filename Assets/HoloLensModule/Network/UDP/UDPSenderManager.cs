@@ -52,32 +52,8 @@ namespace HoloLensModule.Network
 
         public bool SendMessage(string ms)
         {
-#if UNITY_UWP
-            if (writer != null)
-            {
-                if (task == null || task.IsCompleted == true)
-                {
-                    task = Task.Run(async () =>
-                    {
-                        await writer.WriteAsync(ms);
-                        await writer.FlushAsync();
-                    });
-                    return true;
-                }
-            }
-#elif UNITY_EDITOR || UNITY_STANDALONE
-        if (thread == null || thread.ThreadState != ThreadState.Running)
-        {
-            thread = new Thread(() =>
-            {
-                byte[] bytes = Encoding.UTF8.GetBytes(ms);
-                udpclient.Send(bytes, bytes.Length);
-            });
-            thread.Start();
-            return true;
-        }
-#endif
-            return false;
+            byte[] bytes = Encoding.UTF8.GetBytes(ms);
+            return SendMessage(bytes);
         }
 
         public bool SendMessage(byte[] data)
