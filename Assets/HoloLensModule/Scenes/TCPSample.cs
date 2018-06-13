@@ -5,33 +5,23 @@ using HoloLensModule.Network;
 using HoloLensModule.Environment;
 using System;
 
-// Editor StandaloneのUdpClientではデータ送信後でないと受信が行えない
-
-public class UDPSample : MonoBehaviour {
+public class TCPSample : MonoBehaviour {
     public GameObject obj;
 
-    private UDPSenderManager sender;
-    private UDPListenerManager listener;
+    private TCPClientManager tcpClient;
+    private TCPServerManager tcpServer;
 
     private JsonPosition current = new JsonPosition();
     private bool connected = false;
-	// Use this for initialization
-	void Start () {
-        sender = new UDPSenderManager(SystemInfomation.DirectedBroadcastAddress, 8000);
-        listener = new UDPListenerManager(8000);
-        listener.ListenerMessageEvent += ListenerMessageEvent;
+    // Use this for initialization
+    void Start () {
+        tcpServer = new TCPServerManager(8000);
 
-        sender.SendMessage(JsonUtility.ToJson(new JsonPosition()));
+        tcpClient = new TCPClientManager("192.168.1.5",8000);
+        tcpClient.ListenerMessageEvent += ListenerMessageEvent;
     }
 
-    private void OnDestroy()
-    {
-        listener.ListenerMessageEvent -= ListenerMessageEvent;
-        listener.DisConnectListener();
-        sender.DisConnectSender();
-    }
-
-    private void ListenerMessageEvent(string ms, string address)
+    private void ListenerMessageEvent(string ms)
     {
         JsonPosition json = JsonUtility.FromJson<JsonPosition>(ms);
         if (json.connect == true)
@@ -43,14 +33,21 @@ public class UDPSample : MonoBehaviour {
         }
         else
         {
-            if (connected==true)
+            if (connected == true)
             {
                 json.connect = true;
                 json.SetVector3(current.GetVector3());
-                sender.SendMessage(JsonUtility.ToJson(json));
+                tcpClient.SendMessage(JsonUtility.ToJson(json));
             }
         }
         connected = true;
+    }
+
+    private void OnDestroy()
+    {
+        tcpClient.ListenerMessageEvent -= ListenerMessageEvent;
+        tcpClient.DisConnectClient();
+        tcpServer.DisConnectClient();
     }
 
     // Update is called once per frame
@@ -68,7 +65,7 @@ public class UDPSample : MonoBehaviour {
                 JsonPosition json = new JsonPosition();
                 json.connect = true;
                 json.SetVector3(obj.transform.localPosition);
-                sender.SendMessage(JsonUtility.ToJson(json));
+                tcpClient.SendMessage(JsonUtility.ToJson(json));
                 Debug.Log("send " + json.x + " " + json.y + " " + json.z);
             }
         }

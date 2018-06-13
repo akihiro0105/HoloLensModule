@@ -13,16 +13,18 @@ namespace HoloLensModule.Network
 {
     public class TCPClientManager
     {
+        public delegate void ListenerMessageEventHandler(string ms);
+        public ListenerMessageEventHandler ListenerMessageEvent;
+
+        public delegate void ListenerByteEventHandler(byte[] data);
+        public ListenerByteEventHandler ListenerByteEvent;
+
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
         private Thread mainthread = null;
         private Thread sendthread = null;
-        private TcpClient tcpclient = null;
-        private struct ConnectStrings
-        {
-            public string ip;
-            public int port;
-        }
+        private NetworkStream stream = null;
+        private bool isActiveThread = false;
 #endif
         public TCPClientManager() { }
 
@@ -37,11 +39,33 @@ namespace HoloLensModule.Network
 #elif UNITY_EDITOR || UNITY_STANDALONE
             if (mainthread == null)
             {
-                ConnectStrings connect = new ConnectStrings();
-                connect.ip = ipaddress;
-                connect.port = port;
-                mainthread = new Thread(new ParameterizedThreadStart(ClientThread));
-                mainthread.Start(connect);
+                mainthread = new Thread(()=>
+                {
+                    TcpClient tcpclient = new TcpClient(ipaddress, port);
+                    tcpclient.ReceiveTimeout = 100;
+                    stream = tcpclient.GetStream();
+                    isActiveThread = true;
+                    while (isActiveThread)
+                    {
+                        try
+                        {
+                            byte[] bytes = new byte[tcpclient.ReceiveBufferSize];
+                            int num = stream.Read(bytes, 0, bytes.Length);
+                            if (num > 0)
+                            {
+                                if (ListenerMessageEvent != null) ListenerMessageEvent(Encoding.UTF8.GetString(bytes));
+                                if (ListenerByteEvent != null) ListenerByteEvent(bytes);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            Debug.Log(e);
+                        }
+                    }
+                    stream.Close();
+                    tcpclient.Close();
+                });
+                mainthread.Start();
             }
 #endif
         }
@@ -56,7 +80,18 @@ namespace HoloLensModule.Network
         {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            return true;
+            if (sendthread == null || sendthread.ThreadState != ThreadState.Running)
+            {
+                sendthread = new Thread(() =>
+                {
+                    if (stream!=null)
+                    {
+                        stream.Write(data, 0, data.Length);
+                    }
+                });
+                sendthread.Start();
+                return true;
+            }
 #endif
             return false;
         }
@@ -66,28 +101,22 @@ namespace HoloLensModule.Network
         {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
+            isActiveThread = false;
             if (mainthread != null)
             {
                 mainthread.Abort();
                 mainthread = null;
             }
+            if (sendthread != null)
+            {
+                sendthread.Abort();
+                sendthread = null;
+            }
+            stream = null;
 #endif
         }
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private void ClientThread(object obj)
-        {
-            var connect = (ConnectStrings)obj;
-            if (tcpclient == null)
-            {
-                tcpclient = new TcpClient();
-                tcpclient.Connect(connect.ip, connect.port);
-                //
-                //
-                tcpclient.Close();
-                tcpclient = null;
-            }
-        }
 #endif
     }
 }
