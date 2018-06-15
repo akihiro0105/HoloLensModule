@@ -21,7 +21,6 @@ namespace HoloLensModule.Network
 
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private Thread mainthread = null;
         private Thread sendthread = null;
         private NetworkStream stream = null;
         private bool isActiveThread = false;
@@ -37,36 +36,8 @@ namespace HoloLensModule.Network
         {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (mainthread == null)
-            {
-                mainthread = new Thread(()=>
-                {
-                    TcpClient tcpclient = new TcpClient(ipaddress, port);
-                    tcpclient.ReceiveTimeout = 100;
-                    stream = tcpclient.GetStream();
-                    isActiveThread = true;
-                    while (isActiveThread)
-                    {
-                        try
-                        {
-                            byte[] bytes = new byte[tcpclient.ReceiveBufferSize];
-                            int num = stream.Read(bytes, 0, bytes.Length);
-                            if (num > 0)
-                            {
-                                if (ListenerMessageEvent != null) ListenerMessageEvent(Encoding.UTF8.GetString(bytes));
-                                if (ListenerByteEvent != null) ListenerByteEvent(bytes);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.Log(e);
-                        }
-                    }
-                    stream.Close();
-                    tcpclient.Close();
-                });
-                mainthread.Start();
-            }
+            TcpClient tcpclient = new TcpClient();
+            tcpclient.BeginConnect(ipaddress, port, ConnectCallback, tcpclient);
 #endif
         }
 
@@ -82,15 +53,12 @@ namespace HoloLensModule.Network
 #elif UNITY_EDITOR || UNITY_STANDALONE
             if (sendthread == null || sendthread.ThreadState != ThreadState.Running)
             {
-                sendthread = new Thread(() =>
+                if (stream != null)
                 {
-                    if (stream!=null)
-                    {
-                        stream.Write(data, 0, data.Length);
-                    }
-                });
-                sendthread.Start();
-                return true;
+                    sendthread = new Thread(() => { stream.Write(data, 0, data.Length); });
+                    sendthread.Start();
+                    return true;
+                }
             }
 #endif
             return false;
@@ -102,11 +70,6 @@ namespace HoloLensModule.Network
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
             isActiveThread = false;
-            if (mainthread != null)
-            {
-                mainthread.Abort();
-                mainthread = null;
-            }
             if (sendthread != null)
             {
                 sendthread.Abort();
@@ -117,6 +80,35 @@ namespace HoloLensModule.Network
         }
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
+        private void ConnectCallback(IAsyncResult ar)
+        {
+            TcpClient tcp = (TcpClient)ar.AsyncState;
+            tcp.EndConnect(ar);
+            tcp.ReceiveTimeout = 100;
+            stream = tcp.GetStream();
+            isActiveThread = true;
+            byte[] bytes = new byte[tcp.ReceiveBufferSize];
+            while (isActiveThread)
+            {
+                try
+                {
+                    int num = stream.Read(bytes, 0, bytes.Length);
+                    if (num > 0)
+                    {
+                        byte[] data = new byte[num];
+                        Array.Copy(bytes, 0, data, 0, num);
+                        if (ListenerMessageEvent != null) ListenerMessageEvent(Encoding.UTF8.GetString(data));
+                        if (ListenerByteEvent != null) ListenerByteEvent(data);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.Log(e);
+                }
+            }
+            stream.Close();
+            tcp.Close();
+        }
 #endif
     }
 }

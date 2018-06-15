@@ -16,7 +16,6 @@ namespace HoloLensModule.Network
     {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        private Thread mainthread = null;
         private bool isActiveThread = false;
         private List<NetworkStream> streamList = new List<NetworkStream>();
 #endif
@@ -31,53 +30,51 @@ namespace HoloLensModule.Network
         {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (mainthread == null)
-            {
-                mainthread = new Thread(()=>
-                {
-                    TcpListener tcpListener = new TcpListener(IPAddress.Any, port);
-                    tcpListener.Start();
-                    isActiveThread = true;
-                    while (isActiveThread)
-                    {
-                        try
-                        {
-                            TcpClient tcpClient = tcpListener.AcceptTcpClient();
-                            tcpClient.ReceiveTimeout = 100;
-                            NetworkStream stream = tcpClient.GetStream();
-
-                            streamList.Add(stream);
-
-                            byte[] bytes = new byte[tcpClient.ReceiveBufferSize];
-                            int num = stream.Read(bytes, 0, bytes.Length);
-                            streamList[0].Write(bytes, 0, bytes.Length);
-
-                            stream.Close();
-                            tcpClient.Close();
-                        }
-                        catch (Exception e)
-                        {
-                            Debug.Log(e);
-                        }
-                    }
-                    tcpListener.Stop();
-                });
-                mainthread.Start();
-            }
+            TcpListener tcpListener = new TcpListener(IPAddress.Any, port);
+            tcpListener.Start();
+            isActiveThread = true;
+            tcpListener.BeginAcceptTcpClient(AcceptTcpClient, tcpListener);
 #endif
         }
 
+        private void AcceptTcpClient(IAsyncResult ar)
+        {
+            var listener = (TcpListener)ar.AsyncState;
+            TcpClient tcpClient = listener.EndAcceptTcpClient(ar);
+            listener.BeginAcceptTcpClient(AcceptTcpClient, listener);
+            Debug.Log("Set TCPClient");
+            tcpClient.ReceiveTimeout = 100;
+            NetworkStream stream = tcpClient.GetStream();
+            streamList.Add(stream);
+            byte[] bytes = new byte[tcpClient.ReceiveBufferSize];
+            while (isActiveThread)
+            {
+                try
+                {
+                    int num = stream.Read(bytes, 0, bytes.Length);
+                    if (num > 0)
+                    {
+                        for (int i = 0; i < streamList.Count; i++)
+                        {
+                            streamList[i].Write(bytes, 0, num);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.Log(e);
+                }
+            }
+            stream.Close();
+            tcpClient.Close();
+            listener.Stop();
+        }
 
         public void DisConnectClient()
         {
 #if UNITY_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            if (mainthread != null)
-            {
-                isActiveThread = false;
-                mainthread.Abort();
-                mainthread = null;
-            }
+            isActiveThread = false;
 #endif
         }
 
