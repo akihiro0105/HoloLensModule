@@ -46,7 +46,7 @@ public class UDPSample : MonoBehaviour {
             if (connected==true)
             {
                 json.connect = true;
-                json.SetVector3(current.GetVector3());
+                json.SetVector3(new Vector3(current.x, current.y, current.z));
                 sender.SendMessage(JsonUtility.ToJson(json));
             }
         }
@@ -57,7 +57,7 @@ public class UDPSample : MonoBehaviour {
     void Update () {
         if (current.connect == true)
         {
-            obj.transform.localPosition = current.GetVector3();
+            obj.transform.localPosition = new Vector3(current.x, current.y, current.z);
             current.connect = false;
             Debug.Log("receive " + obj.transform.localPosition.x + " " + obj.transform.localPosition.y + " " + obj.transform.localPosition.z);
         }
@@ -90,10 +90,6 @@ public class UDPSample : MonoBehaviour {
             x = v.x;
             y = v.y;
             z = v.z;
-        }
-        public Vector3 GetVector3()
-        {
-            return new Vector3(x, y, z);
         }
     }
 }

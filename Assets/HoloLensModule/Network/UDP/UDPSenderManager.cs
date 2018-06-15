@@ -1,5 +1,6 @@
-﻿#if UNITY_UWP
-using System;
+﻿using System;
+using System.Text;
+#if UNITY_UWP
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Networking;
@@ -7,8 +8,6 @@ using Windows.Networking.Sockets;
 #elif UNITY_EDITOR || UNITY_STANDALONE
 using System.Threading;
 using System.Net.Sockets;
-using System.Text;
-using System;
 #endif
 
 namespace HoloLensModule.Network
