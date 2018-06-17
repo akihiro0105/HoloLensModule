@@ -20,7 +20,7 @@ namespace HoloLensModule.Network
                     }
                 }
                 www.SendWebRequest();
-                while (www.isDone)
+                while (!www.isDone)
                 {
                     // progress
                     if (progress != null) progress.Invoke(www.downloadProgress);
@@ -56,7 +56,7 @@ namespace HoloLensModule.Network
                     }
                 }
                 www.SendWebRequest();
-                while (www.isDone)
+                while (!www.isDone)
                 {
                     // progress
                     if (progress != null) progress.Invoke(www.downloadProgress);
