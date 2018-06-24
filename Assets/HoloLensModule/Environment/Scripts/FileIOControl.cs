@@ -114,6 +114,28 @@ namespace HoloLensModule.Environment
             if (action != null) action.Invoke();
         }
 
+        public static IEnumerator WriteAppendTextFile(string name, string data, Action action = null)
+        {
+#if UNITY_UWP
+            Task task = Task.Run(() =>
+            {
+                if (File.Exists(name))
+                {
+                    File.AppendAllText(name, data);
+                }
+            });
+            yield return new WaitWhile(() => task.IsCompleted == false);
+#elif UNITY_EDITOR || UNITY_STANDALONE
+            Thread thread = new Thread(() => {
+                File.AppendAllText(name, data);
+            });
+            thread.Start();
+            yield return new WaitWhile(() => thread.IsAlive == true);
+#endif
+            yield return null;
+            if (action != null) action.Invoke();
+        }
+
         public static IEnumerator WriteBytesFile(string name, byte[] data, Action action = null)
         {
 #if UNITY_UWP
