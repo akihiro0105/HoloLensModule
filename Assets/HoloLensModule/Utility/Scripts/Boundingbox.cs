@@ -31,6 +31,8 @@ namespace HoloLensModule.Utility
             lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             lineRenderer.receiveShadows = false;
             lineRenderer.useWorldSpace = false;
+            lineRenderer.widthMultiplier = LineWidth;
+            lineRenderer.material = LineMaterial;
             UpdateBounds();
         }
 
