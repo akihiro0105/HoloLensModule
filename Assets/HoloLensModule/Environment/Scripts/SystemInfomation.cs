@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.Net;
 using System;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using Windows.Networking.Connectivity;
 using Windows.System.Diagnostics;
 #endif
@@ -25,7 +25,7 @@ namespace HoloLensModule.Environment
         public static void AppExit()
         {
             Application.Quit();
-#if UNITY_UWP
+#if WINDOWS_UWP
             Windows.ApplicationModel.Core.CoreApplication.Exit();
 #endif
         }
@@ -43,7 +43,7 @@ namespace HoloLensModule.Environment
             get
             {
                 string ipaddress = "";
-#if UNITY_UWP
+#if WINDOWS_UWP
                 var host = NetworkInformation.GetHostNames();
                 foreach (var item in host)
                 {
@@ -76,7 +76,7 @@ namespace HoloLensModule.Environment
             get
             {
                 string subnetmask = "";
-#if UNITY_UWP
+#if WINDOWS_UWP
                 var host = NetworkInformation.GetHostNames();
                 foreach (var item in host)
                 {
@@ -97,7 +97,7 @@ namespace HoloLensModule.Environment
                     }
                 }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-            var info = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
+                var info = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
             foreach (var item in info)
             {
                 if (item.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
@@ -155,7 +155,7 @@ namespace HoloLensModule.Environment
             get
             {
                 string ssid = "";
-#if UNITY_UWP
+#if WINDOWS_UWP
                 var profile = NetworkInformation.GetInternetConnectionProfile();
                 if (profile.IsWlanConnectionProfile==true)
                 {
@@ -172,7 +172,7 @@ namespace HoloLensModule.Environment
             get
             {
                 byte? signal = null;
-#if UNITY_UWP
+#if WINDOWS_UWP
                 var profile = NetworkInformation.GetInternetConnectionProfile();
                 if (profile.IsWlanConnectionProfile == true)
                 {
@@ -189,7 +189,7 @@ namespace HoloLensModule.Environment
             get
             {
                 long memory = 0;
-#if UNITY_UWP
+#if WINDOWS_UWP
                 memory = (long)ProcessDiagnosticInfo.GetForCurrentProcess().MemoryUsage.GetReport().WorkingSetSizeInBytes;
 #elif UNITY_EDITOR || UNITY_STANDALONE
                 memory = System.Environment.WorkingSet;

@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using System.Threading.Tasks;
 using Windows.Networking;
 using Windows.Networking.Sockets;
@@ -23,7 +23,7 @@ namespace HoloLensModule.Network
         public delegate void ListenerByteEventHandler(byte[] data);
         public ListenerByteEventHandler ListenerByteEvent;
 
-#if UNITY_UWP
+#if WINDOWS_UWP
         private StreamWriter writer = null;
         private Task writetask = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
@@ -41,7 +41,7 @@ namespace HoloLensModule.Network
 
         public void ConnectClient(string ipaddress, int port)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task.Run(async() =>
             {
                 StreamSocket socket = new StreamSocket();
@@ -88,7 +88,7 @@ namespace HoloLensModule.Network
 
         public bool SendMessage(byte[] data)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (writetask == null || writetask.IsCompleted == true)
             {
                 if (writer != null)
@@ -117,7 +117,7 @@ namespace HoloLensModule.Network
 
         public void DisConnectClient()
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (writer!=null)
             {
                 writer.Dispose();
@@ -133,7 +133,7 @@ namespace HoloLensModule.Network
             stream = null;
 #endif
         }
-#if UNITY_UWP
+#if WINDOWS_UWP
 #elif UNITY_EDITOR || UNITY_STANDALONE
         private void ConnectCallback(IAsyncResult ar)
         {

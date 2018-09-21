@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
 using System.Threading;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using System.Threading.Tasks;
 #elif UNITY_EDITOR || UNITY_STANDALONE
 #endif
@@ -19,7 +19,7 @@ namespace HoloLensModule.Environment
             get
             {
                 var path = Application.dataPath + "\\..\\Local";
-#if UNITY_UWP
+#if WINDOWS_UWP
                 path = Application.persistentDataPath;
 #elif UNITY_EDITOR || UNITY_STANDALONE
                 if (!Directory.Exists(path))
@@ -42,7 +42,7 @@ namespace HoloLensModule.Environment
         public static IEnumerator ReadTextFile(string name,Action<string> action)
         {
             string data = null;
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task task = Task.Run(() =>
             {
                 if (File.Exists(name))
@@ -68,7 +68,7 @@ namespace HoloLensModule.Environment
         public static IEnumerator ReadBytesFile(string name, Action<byte[]> action)
         {
             byte[] data = null;
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task task = Task.Run(() =>
               {
                   if (File.Exists(name))
@@ -94,7 +94,7 @@ namespace HoloLensModule.Environment
         // Write
         public static IEnumerator WriteTextFile(string name,string data,Action action = null)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task task = Task.Run(() =>
             {
                 if (File.Exists(name))
@@ -116,7 +116,7 @@ namespace HoloLensModule.Environment
 
         public static IEnumerator WriteAppendTextFile(string name, string data, Action action = null)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task task = Task.Run(() =>
             {
                 if (File.Exists(name))
@@ -138,7 +138,7 @@ namespace HoloLensModule.Environment
 
         public static IEnumerator WriteBytesFile(string name, byte[] data, Action action = null)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task task = Task.Run(() =>
             {
                 if (File.Exists(name))

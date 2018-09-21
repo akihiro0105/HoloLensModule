@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Networking;
@@ -15,11 +15,11 @@ namespace HoloLensModule.Network
     public class UDPSenderManager
     {
 
-#if UNITY_UWP
+#if WINDOWS_UWP
         private StreamWriter writer = null;
         private Task task = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-    private Thread thread = null;
+        private Thread thread = null;
     private UdpClient udpclient = null;
 #endif
 
@@ -32,7 +32,7 @@ namespace HoloLensModule.Network
 
         public void ConnectSender(string ipaddress, int port)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             task = Task.Run(async () =>
                {
                    DatagramSocket socket = new DatagramSocket();
@@ -57,7 +57,7 @@ namespace HoloLensModule.Network
 
         public bool SendMessage(byte[] data)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (writer != null)
             {
                 if (task == null || task.IsCompleted == true)
@@ -71,7 +71,7 @@ namespace HoloLensModule.Network
                 }
             }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        if (thread == null || thread.ThreadState != ThreadState.Running)
+            if (thread == null || thread.ThreadState != ThreadState.Running)
         {
             thread = new Thread(() =>
             {
@@ -86,7 +86,7 @@ namespace HoloLensModule.Network
 
         public void DisConnectSender()
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             task = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
             if (udpclient != null)

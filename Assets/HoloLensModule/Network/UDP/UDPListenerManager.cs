@@ -1,5 +1,5 @@
 ﻿using System;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Networking.Sockets;
@@ -19,11 +19,11 @@ namespace HoloLensModule.Network
         public delegate void ListenerByteEventHandler(byte[] data, string address);
         public ListenerByteEventHandler ListenerByteEvent;
 
-#if UNITY_UWP
+#if WINDOWS_UWP
         private Task task = null;
         private DatagramSocket socket = null;
 #elif UNITY_EDITOR || UNITY_STANDALONE
-    private UdpClient udpclient = null;
+        private UdpClient udpclient = null;
 #endif
 
         public UDPListenerManager() { }
@@ -35,7 +35,7 @@ namespace HoloLensModule.Network
 
         public void ConnectListener(int port)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (task==null)
             {
                 task = Task.Run(async () => {
@@ -45,12 +45,12 @@ namespace HoloLensModule.Network
                 });
             }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        udpclient = new UdpClient(port);
+            udpclient = new UdpClient(port);
         udpclient.BeginReceive(new AsyncCallback(ReceiveCallback), udpclient);
 #endif
         }
 
-#if UNITY_UWP
+#if WINDOWS_UWP
         async void MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
         {
             StreamReader reader = new StreamReader(args.GetDataStream().AsStreamForRead());
@@ -63,7 +63,7 @@ namespace HoloLensModule.Network
             }
         }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-    private void ReceiveCallback(IAsyncResult result)
+        private void ReceiveCallback(IAsyncResult result)
     {
         UdpClient udp = (UdpClient)result.AsyncState;
         IPEndPoint remote = null;
@@ -76,7 +76,7 @@ namespace HoloLensModule.Network
 
         public void DisConnectListener()
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (socket != null)
             {
                 socket.MessageReceived -= MessageReceived;
@@ -85,7 +85,7 @@ namespace HoloLensModule.Network
                 task = null;
             }
 #elif UNITY_EDITOR || UNITY_STANDALONE
-        if (udpclient != null)
+            if (udpclient != null)
         {
             udpclient.Close();
             udpclient = null;

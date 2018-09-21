@@ -2,7 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using System.Threading.Tasks;
 using Windows.Networking.Sockets;
 using System.IO;
@@ -15,7 +15,7 @@ namespace HoloLensModule.Network
 {
     public class TCPServerManager 
     {
-#if UNITY_UWP
+#if WINDOWS_UWP
         private StreamSocketListener socketlistener = null;
         private List<StreamWriter> streamList = new List<StreamWriter>();
 #elif UNITY_EDITOR || UNITY_STANDALONE
@@ -33,7 +33,7 @@ namespace HoloLensModule.Network
 
         public void ConnectServer(int port)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             Task.Run(async () =>
             {
                 socketlistener = new StreamSocketListener();
@@ -49,7 +49,7 @@ namespace HoloLensModule.Network
 
         public void DisConnectClient()
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             socketlistener.Dispose();
 #elif UNITY_EDITOR || UNITY_STANDALONE
             tcpListener.Stop();
@@ -57,7 +57,7 @@ namespace HoloLensModule.Network
             isActiveThread = false;
         }
 
-#if UNITY_UWP
+#if WINDOWS_UWP
         private async void ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
             StreamReader reader = new StreamReader(args.Socket.InputStream.AsStreamForRead());
