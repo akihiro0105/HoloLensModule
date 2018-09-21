@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
-#if UNITY_UWP
+#if WINDOWS_UWP
 using Windows.Gaming.Input;
 using Windows.System;
 #endif
@@ -43,18 +43,18 @@ namespace HoloLensModule.Input
     [Serializable]
     public class AxisActionEvent : UnityEvent<XBoxStick, Vector2> { }
 
-    public class XBoxControler : MonoBehaviour
+    public class XBoxController : MonoBehaviour
     {
         public ButtonActionEvent GetButton = new ButtonActionEvent();
         public AxisActionEvent GetAxis = new AxisActionEvent();
-#if UNITY_UWP
+#if WINDOWS_UWP
         private Gamepad gamepad = null;
 #endif
 
         // Use this for initialization
         void Start()
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             gamepad = (Gamepad.Gamepads.Count > 0) ? Gamepad.Gamepads[0] : null;
             Gamepad.GamepadAdded += (sender, e) => { gamepad = e; };
 #endif
@@ -63,7 +63,7 @@ namespace HoloLensModule.Input
         // Update is called once per frame
         void Update()
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (gamepad != null)
             {
                 var reader = gamepad.GetCurrentReading();
@@ -106,7 +106,7 @@ namespace HoloLensModule.Input
 
         public void SetVibration(float rPower,float lPower)
         {
-#if UNITY_UWP
+#if WINDOWS_UWP
             if (gamepad != null)
             {
                 GamepadVibration gamepadVibration = new GamepadVibration();
