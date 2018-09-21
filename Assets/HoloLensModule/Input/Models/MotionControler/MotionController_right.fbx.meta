@@ -1,7 +1,5 @@
 fileFormatVersion: 2
 guid: 67df5f24c8478f349a255e749b623641
-timeCreated: 1524803181
-licenseType: Pro
 ModelImporter:
   serializedVersion: 22
   fileIDToRecycleName:
@@ -157,6 +155,9 @@ ModelImporter:
     2300086: System_2
     2300088: Touchpad_2
     2300090: Trigger_2
+    2300092: Enclosure_2
+    2300094: Inner_Ring_2
+    2300096: Outer_Ring_2
     3300000: 10_3
     3300002: 11_2
     3300004: 12_2
@@ -203,6 +204,9 @@ ModelImporter:
     3300086: System_2
     3300088: Touchpad_2
     3300090: Trigger_2
+    3300092: Enclosure_2
+    3300094: Inner_Ring_2
+    3300096: Outer_Ring_2
     4300000: 37
     4300002: 36
     4300004: 35_2
@@ -249,6 +253,9 @@ ModelImporter:
     4300086: Grab_2
     4300088: Touchpad_2
     4300090: Trigger_2
+    4300092: Inner_Ring_2
+    4300094: Outer_Ring_2
+    4300096: Enclosure_2
     9500000: //RootNode
   externalObjects:
   - first:
@@ -298,6 +305,8 @@ ModelImporter:
     optimizeMeshForGPU: 1
     keepQuads: 0
     weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
     secondaryUVAngleDistortion: 8
     secondaryUVAreaDistortion: 15.000001
     secondaryUVHardAngle: 88
