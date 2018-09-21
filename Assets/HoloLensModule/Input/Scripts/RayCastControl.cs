@@ -1,88 +1,145 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if UNITY_EDITOR || UNITY_UWP
-#if !UNITY_2017_2_OR_NEWER
-using UnityEngine.VR.WSA;
-#else
-using UnityEngine.XR.WSA;
-#endif
-#endif
 
 namespace HoloLensModule.Input
 {
-    // Raycastによる視線上のオブジェクトの取得
     public class RayCastControl : HoloLensModuleSingleton<RayCastControl>
     {
-        public float maxDistance = 30.0f;
+        [SerializeField]
+        private GameObject RaycastSourceObject = null;
+        public float MoveSpeed = 2.0f;
+        [SerializeField]
+        private GameObject RaycastHitObject = null;
+        public bool isActiveLine = false;
+        public Material LineRendererMaterial;
+        public float deltaUp = 0.0f;
 
-        private GameObject bufobj = null;
-        private RaycastHit info;
-        private FocusInterface[] fs;
+        public delegate void RaycastHitEventHandler(GameObject go);
+        public RaycastHitEventHandler RaycastHitEvent;
 
+        public void SetRaycastSourceObject(GameObject source)
+        {
+            RaycastSourceObject = source;
+            currentFront = RaycastSourceObject.transform.forward + RaycastSourceObject.transform.up * deltaUp;
+        }
+        public GameObject GetRaycastHitObject()
+        {
+            return currentHitObject;
+        }
+        public Vector3? GetRaycastHitPoint()
+        {
+            return hitpoint;
+        }
+
+        #region Private Function
+        private Vector3 currentFront;
+        private GameObject currentHitObject = null;
+        private Vector3? hitpoint = null;
+        private LineRenderer lineRenderer;
+
+        // Use this for initialization
+        void Start()
+        {
+            if (RaycastSourceObject != null) SetRaycastSourceObject(RaycastSourceObject);
+            InitLinerenderer();
+        }
+
+        // Update is called once per frame
         void Update()
         {
-#if UNITY_EDITOR || UNITY_UWP
-#if !UNITY_2017_2_OR_NEWER
-            if (bufobj != null)
-#else
-            if (bufobj != null && HolographicSettings.IsDisplayOpaque == false)
-#endif
+            if (RaycastSourceObject != null)
             {
-                Vector3 normal = -Camera.main.transform.forward;
-                Vector3 position = bufobj.transform.position;
-                HolographicSettings.SetFocusPointForFrame(position, normal);
-            }
-#endif
-        }
-
-        void FixedUpdate()
-        {
-            if (Physics.Raycast(Camera.main.transform.position, Camera.main.transform.forward, out info, maxDistance)) FocusInterfaceObject(info.transform.gameObject);
-            else FocusInterfaceObject(null);
-        }
-
-        private void FocusInterfaceObject(GameObject obj)
-        {
-            if (obj == null)
-            {
-                SetFocusEnd();
-            }
-            else
-            {
-                if (obj.GetComponent<FocusInterface>() == null)
+                var forward = RaycastSourceObject.transform.forward + RaycastSourceObject.transform.up * deltaUp;
+                currentFront = Vector3.Lerp(currentFront, forward, Time.deltaTime * MoveSpeed);
+                RaycastHit hitinfo;
+                if (Physics.Raycast(RaycastSourceObject.transform.position, currentFront, out hitinfo, 30.0f))
                 {
-                    if (obj.transform.parent == null)
+                    if (currentHitObject == null || currentHitObject != hitinfo.transform.gameObject)
                     {
-                        FocusInterfaceObject(null);
+                        Debug.Log(hitinfo.transform.gameObject.name);
+                        if (RaycastHitEvent != null) RaycastHitEvent(hitinfo.transform.gameObject);
+                        var iout = SearchInterface<IFocusInterface>(currentHitObject);
+                        if (iout != null) iout.RaycastOut();
+                        var ihit = SearchInterface<IFocusInterface>(hitinfo.transform.gameObject);
+                        if (ihit != null) ihit.RaycastHit();
                     }
-                    else
-                    {
-                        FocusInterfaceObject(obj.transform.parent.gameObject);
-                    }
+                    currentHitObject = hitinfo.transform.gameObject;
+                    hitpoint = hitinfo.point - currentFront * 0.01f;
                 }
                 else
                 {
-                    if (bufobj != obj) SetFocusEnd();
-                    fs = obj.GetComponents<FocusInterface>();
-                    for (int i = 0; i < fs.Length; ++i) fs[i].FocusEnter();
-                    bufobj = obj;
+                    if (RaycastHitEvent != null) RaycastHitEvent(null);
+                    var iout = SearchInterface<IFocusInterface>(currentHitObject);
+                    if (iout != null) iout.RaycastOut();
+                    currentHitObject = null;
+                    hitpoint = null;
+                }
+                UpdateRaycastHitObject();
+                UpdateLinerenderer();
+            }
+        }
+
+        private void UpdateRaycastHitObject()
+        {
+            if (RaycastHitObject != null)
+            {
+                if (hitpoint != null)
+                {
+                    RaycastHitObject.SetActive(true);
+                    RaycastHitObject.transform.position = hitpoint.Value;
+                    RaycastHitObject.transform.LookAt(RaycastSourceObject.transform.position);
+                }
+                else
+                {
+                    RaycastHitObject.SetActive(false);
                 }
             }
         }
 
-        private void SetFocusEnd()
+        private void InitLinerenderer()
         {
-            if (bufobj == null) return;
-            fs = bufobj.GetComponents<FocusInterface>();
-            if (fs != null) for (int i = 0; i < fs.Length; ++i) fs[i].FocusEnd();
-            bufobj = null;
+            lineRenderer = gameObject.AddComponent<LineRenderer>();
+            lineRenderer.material = LineRendererMaterial;
+            lineRenderer.useWorldSpace = true;
+            lineRenderer.widthMultiplier = 0.0005f;
+            lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lineRenderer.receiveShadows = false;
+        }
+
+        private void UpdateLinerenderer()
+        {
+            if (isActiveLine == true)
+            {
+                lineRenderer.positionCount = 2;
+                lineRenderer.SetPosition(0, RaycastSourceObject.transform.position);
+                lineRenderer.SetPosition(1, (hitpoint != null) ? hitpoint.Value : RaycastSourceObject.transform.position + currentFront);
+            }
+            else
+            {
+                lineRenderer.positionCount = 0;
+            }
+        }
+        #endregion
+
+        public T SearchInterface<T>(GameObject go)
+        {
+            if (go == null) return default(T);
+            var buf = go.GetComponent<T>();
+            if (buf == null)
+            {
+                return (go.transform.parent == null) ? default(T) : SearchInterface<T>(go.transform.parent.gameObject);
+            }
+            else
+            {
+                return buf;
+            }
         }
     }
 
-    public interface FocusInterface
+    public interface IFocusInterface
     {
-        void FocusEnter();
-        void FocusEnd();
+        void RaycastHit();
+        void RaycastOut();
     }
 }
