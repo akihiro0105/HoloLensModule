@@ -4,124 +4,162 @@ using UnityEngine;
 
 namespace HoloLensModule.Utility
 {
+    /// <summary>
+    /// Collider,SkinnedMeshRenderer,MeshRenderer,MeshFilterに対応したBoundingbox
+    /// 算出したBoundingboxにBoxColliderを適応してLineRendererで描画します
+    /// </summary>
     public class Boundingbox : MonoBehaviour
     {
+        /// <summary>
+        /// Boundingboxの算出有効化，無効化
+        /// </summary>
         public bool isActive = true;
+        /// <summary>
+        /// Boundingboxを表示，非表示
+        /// </summary>
         public bool isView = true;
+        /// <summary>
+        /// Boundingboxのラインのマテリアル
+        /// </summary>
         public Material LineMaterial;
+        /// <summary>
+        /// Boundingboxのラインのサイズ
+        /// </summary>
         public float LineWidth = 0.001f;
+        /// <summary>
+        /// Colliderを使ったboundsの算出
+        /// </summary>
         [Space(14)]
-        public bool useCollider = true;
-        public bool useSkinnedMeshRenderer = true;
-        public bool useMeshRenderer = true;
-        public bool useMeshFilter = false;
+        [SerializeField] private bool useCollider = true;
+        /// <summary>
+        /// SkinnedMeshRendererを使ったboundsの算出
+        /// </summary>
+        [SerializeField] private bool useSkinnedMeshRenderer = true;
+        /// <summary>
+        /// MeshRendererを使ったboundsの算出
+        /// </summary>
+        [SerializeField] private bool useMeshRenderer = true;
+        /// <summary>
+        /// MeshFilterを使ったboundsの算出
+        /// </summary>
+        [SerializeField] private bool useMeshFilter = false;
 
         private LineRenderer lineRenderer;
         private BoxCollider boxCollider;
         private Vector3[] linePoint = new Vector3[16];
-        private bool initflag = false;
 
         // Use this for initialization
         void Start()
         {
+            // boxcolliderの追加
             boxCollider = gameObject.AddComponent<BoxCollider>();
             boxCollider.center = Vector3.zero;
             boxCollider.size = Vector3.zero;
+            // linerendererの追加
             lineRenderer = gameObject.AddComponent<LineRenderer>();
             lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             lineRenderer.receiveShadows = false;
             lineRenderer.useWorldSpace = false;
             lineRenderer.widthMultiplier = LineWidth;
             lineRenderer.material = LineMaterial;
-            UpdateBounds();
+            updateBounds();
         }
 
         // Update is called once per frame
         void Update()
         {
-            if (isActive == true) UpdateBounds();
-            lineRenderer.positionCount = (isView == true) ? linePoint.Length : 0;
+            if (isActive == true) updateBounds();
+            boxCollider.enabled = isView;
+            lineRenderer.positionCount = (isView) ? linePoint.Length : 0;
             lineRenderer.widthMultiplier = LineWidth;
             lineRenderer.material = LineMaterial;
         }
 
-        private void UpdateBounds()
+        /// <summary>
+        /// 各bounds算出元からboundingboxを生成
+        /// </summary>
+        private void updateBounds()
         {
-            initflag = false;
-            Bounds bounds = new Bounds();
+            Bounds? bounds = null;
+            // 基底gameobjectのmatrix情報の作成
             var _mat = Matrix4x4.TRS(transform.position, transform.rotation, transform.localScale).inverse;
+            
+            // colliderのbounds算出
             if (useCollider == true)
             {
-                var colliders = GetComponentsInChildren<Collider>();
-                for (int i = 0; i < colliders.Length; i++)
-                {
-                    if (colliders[i] != boxCollider)
-                    {
-                        bounds = EncapsulateBounds(colliders[i].bounds, _mat, bounds);
-                    }
-                }
+                foreach (var t in GetComponentsInChildren<Collider>())
+                    if (t != boxCollider)
+                        bounds = encapsulateBounds(t.bounds, _mat, bounds);
             }
 
+            // skinnedmeshrendererのbounds算出
             if (useSkinnedMeshRenderer == true)
             {
-                var skins = GetComponentsInChildren<SkinnedMeshRenderer>();
-                for (int i = 0; i < skins.Length; i++)
-                {
-                    bounds = EncapsulateBounds(skins[i].bounds, _mat, bounds);
-                }
+                foreach (var t in GetComponentsInChildren<SkinnedMeshRenderer>())
+                    bounds = encapsulateBounds(t.bounds, _mat, bounds);
             }
 
+            // meshrendererのbounds算出
             if (useMeshRenderer == true)
             {
-                var meshs = GetComponentsInChildren<MeshRenderer>();
-                for (int i = 0; i < meshs.Length; i++)
-                {
-                    bounds = EncapsulateBounds(meshs[i].bounds, _mat, bounds);
-                }
+                foreach (var t in GetComponentsInChildren<MeshRenderer>())
+                    bounds = encapsulateBounds(t.bounds, _mat, bounds);
             }
 
+            // MeshFilterのbounds算出
             if (useMeshFilter == true)
             {
-                bounds = UpdateBoundsMeshChild(gameObject, Matrix4x4.identity, bounds);
+                bounds = updateBoundsMeshChild(gameObject, Matrix4x4.identity, bounds);
             }
 
-            if (initflag == true)
+            // bounds情報のboxcolliderとlinerendererへの適応
+            if (bounds!=null)
             {
-                boxCollider.center = bounds.center;
-                boxCollider.size = bounds.size;
+                boxCollider.center = bounds.Value.center;
+                boxCollider.size = bounds.Value.size;
             }
-            UpdateBoundingbox();
+            lineRenderer.SetPositions(updateBounsPoints(linePoint,boxCollider));
         }
 
         #region // USE_MESHFILTER
-        private Bounds UpdateBoundsMeshChild(GameObject go, Matrix4x4 mat, Bounds initbounds)
+        /// <summary>
+        /// MeshFilterのbounds算出
+        /// </summary>
+        /// <param name="go"></param>
+        /// <param name="mat"></param>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private Bounds? updateBoundsMeshChild(GameObject go, Matrix4x4 mat, Bounds? source)
         {
-            Bounds bufbounds = initbounds;
-            var meshs = go.GetComponents<MeshFilter>();
-            for (int i = 0; i < meshs.Length; i++)
-            {
-                bufbounds = EncapsulateBounds(meshs[i].mesh.bounds, mat, bufbounds);
-            }
-            for (int i = 0; i < go.transform.childCount; i++)
+            var bounds = source;
+            foreach (var t in go.GetComponents<MeshFilter>())
+                bounds = encapsulateBounds(t.mesh.bounds, mat, bounds);
+            for (var i = 0; i < go.transform.childCount; i++)
             {
                 var buf = go.transform.GetChild(i);
-                bufbounds = UpdateBoundsMeshChild(buf.gameObject, mat * Matrix4x4.TRS(buf.localPosition, buf.localRotation, buf.localScale), bufbounds);
+                bounds = updateBoundsMeshChild(buf.gameObject, mat * Matrix4x4.TRS(buf.localPosition, buf.localRotation, buf.localScale), bounds);
             }
-            return bufbounds;
+            return bounds;
         }
         #endregion
 
-        private Bounds EncapsulateBounds(Bounds bounds,Matrix4x4 mat,Bounds initbounds)
+        /// <summary>
+        /// 指定bounds同士をmatrixで座標変換後に合成
+        /// </summary>
+        /// <param name="target"></param>
+        /// <param name="mat"></param>
+        /// <param name="source"></param>
+        /// <returns></returns>
+        private Bounds encapsulateBounds(Bounds target,Matrix4x4 mat,Bounds? source)
         {
-            Bounds bufbounds = initbounds;
-            Vector3 p1 = bounds.center + new Vector3(bounds.extents.x, bounds.extents.y, bounds.extents.z);
-            Vector3 p2 = bounds.center + new Vector3(-bounds.extents.x, bounds.extents.y, bounds.extents.z);
-            Vector3 p3 = bounds.center + new Vector3(-bounds.extents.x, bounds.extents.y, -bounds.extents.z);
-            Vector3 p4 = bounds.center + new Vector3(bounds.extents.x, bounds.extents.y, -bounds.extents.z);
-            Vector3 p5 = bounds.center + new Vector3(bounds.extents.x, -bounds.extents.y, bounds.extents.z);
-            Vector3 p6 = bounds.center + new Vector3(-bounds.extents.x, -bounds.extents.y, bounds.extents.z);
-            Vector3 p7 = bounds.center + new Vector3(-bounds.extents.x, -bounds.extents.y, -bounds.extents.z);
-            Vector3 p8 = bounds.center + new Vector3(bounds.extents.x, -bounds.extents.y, -bounds.extents.z);
+            var p1 = target.center + new Vector3(target.extents.x, target.extents.y, target.extents.z);
+            var p2 = target.center + new Vector3(-target.extents.x, target.extents.y, target.extents.z);
+            var p3 = target.center + new Vector3(-target.extents.x, target.extents.y, -target.extents.z);
+            var p4 = target.center + new Vector3(target.extents.x, target.extents.y, -target.extents.z);
+            var p5 = target.center + new Vector3(target.extents.x, -target.extents.y, target.extents.z);
+            var p6 = target.center + new Vector3(-target.extents.x, -target.extents.y, target.extents.z);
+            var p7 = target.center + new Vector3(-target.extents.x, -target.extents.y, -target.extents.z);
+            var p8 = target.center + new Vector3(target.extents.x, -target.extents.y, -target.extents.z);
 
             p1 = mat.MultiplyPoint(p1);
             p2 = mat.MultiplyPoint(p2);
@@ -131,43 +169,46 @@ namespace HoloLensModule.Utility
             p6 = mat.MultiplyPoint(p6);
             p7 = mat.MultiplyPoint(p7);
             p8 = mat.MultiplyPoint(p8);
-            if (initflag == false)
-            {
-                bufbounds.center = p1;
-                bufbounds.size = Vector3.zero;
-                initflag = true;
-            }
-            bufbounds.Encapsulate(p1);
-            bufbounds.Encapsulate(p2);
-            bufbounds.Encapsulate(p3);
-            bufbounds.Encapsulate(p4);
-            bufbounds.Encapsulate(p5);
-            bufbounds.Encapsulate(p6);
-            bufbounds.Encapsulate(p7);
-            bufbounds.Encapsulate(p8);
 
-            return bufbounds;
+            if (source == null) source = new Bounds(p1, Vector3.zero);
+            var bounds = source.Value;
+            bounds.Encapsulate(p1);
+            bounds.Encapsulate(p2);
+            bounds.Encapsulate(p3);
+            bounds.Encapsulate(p4);
+            bounds.Encapsulate(p5);
+            bounds.Encapsulate(p6);
+            bounds.Encapsulate(p7);
+            bounds.Encapsulate(p8);
+
+            return bounds;
         }
 
-        private void UpdateBoundingbox()
+        /// <summary>
+        /// 指定boxcolliderを囲うlinrenderer用の頂点を設定
+        /// </summary>
+        /// <param name="points"></param>
+        /// <param name="box"></param>
+        /// <returns></returns>
+        private Vector3[] updateBounsPoints(Vector3[] points,BoxCollider box)
         {
-            linePoint[0].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[1].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[2].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[3].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[4].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[5].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[6].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[7].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[8].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[9].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[10].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[11].Set(boxCollider.center.x + boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[12].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            linePoint[13].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y - boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[14].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z + boxCollider.size.z / 2);
-            linePoint[15].Set(boxCollider.center.x - boxCollider.size.x / 2, boxCollider.center.y + boxCollider.size.y / 2, boxCollider.center.z - boxCollider.size.z / 2);
-            lineRenderer.SetPositions(linePoint);
+            points[0].Set(box.center.x + box.size.x / 2, box.center.y - box.size.y / 2, box.center.z + box.size.z / 2);
+            points[1].Set(box.center.x + box.size.x / 2, box.center.y + box.size.y / 2, box.center.z + box.size.z / 2);
+            points[2].Set(box.center.x - box.size.x / 2, box.center.y + box.size.y / 2, box.center.z + box.size.z / 2);
+            points[3].Set(box.center.x - box.size.x / 2, box.center.y - box.size.y / 2, box.center.z + box.size.z / 2);
+            points[4].Set(box.center.x + box.size.x / 2, box.center.y - box.size.y / 2, box.center.z + box.size.z / 2);
+            points[5].Set(box.center.x + box.size.x / 2, box.center.y - box.size.y / 2, box.center.z - box.size.z / 2);
+            points[6].Set(box.center.x + box.size.x / 2, box.center.y + box.size.y / 2, box.center.z - box.size.z / 2);
+            points[7].Set(box.center.x + box.size.x / 2, box.center.y + box.size.y / 2, box.center.z + box.size.z / 2);
+            points[8].Set(box.center.x + box.size.x / 2, box.center.y + box.size.y / 2, box.center.z - box.size.z / 2);
+            points[9].Set(box.center.x - box.size.x / 2, box.center.y + box.size.y / 2, box.center.z - box.size.z / 2);
+            points[10].Set(box.center.x - box.size.x / 2, box.center.y - box.size.y / 2, box.center.z - box.size.z / 2);
+            points[11].Set(box.center.x + box.size.x / 2, box.center.y - box.size.y / 2, box.center.z - box.size.z / 2);
+            points[12].Set(box.center.x - box.size.x / 2, box.center.y - box.size.y / 2, box.center.z - box.size.z / 2);
+            points[13].Set(box.center.x - box.size.x / 2, box.center.y - box.size.y / 2, box.center.z + box.size.z / 2);
+            points[14].Set(box.center.x - box.size.x / 2, box.center.y + box.size.y / 2, box.center.z + box.size.z / 2);
+            points[15].Set(box.center.x - box.size.x / 2, box.center.y + box.size.y / 2, box.center.z - box.size.z / 2);
+            return points;
         }
     }
 }

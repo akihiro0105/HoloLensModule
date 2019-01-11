@@ -2,22 +2,29 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class HoloLensModuleSingleton<T> : MonoBehaviour where T : HoloLensModuleSingleton<T>
+namespace HoloLensModule.Utility
 {
-    private static T instance;
-
-    public static T Instance { get { return instance; } }
-
-    protected virtual void Awake()
+    /// <summary>
+    /// HoloLensModule用のシングルトン
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class HoloLensModuleSingleton<T> : MonoBehaviour where T : HoloLensModuleSingleton<T>
     {
-        if (instance == null) instance = (T)this;
-    }
+        private static T instance;
 
-    protected virtual void OnDestroy()
-    {
-        if (instance == this)
+        public static T Instance
         {
-            instance = null;
+            get { return instance; }
+        }
+
+        protected virtual void Awake()
+        {
+            if (instance == null) instance = (T) this;
+        }
+
+        protected virtual void OnDestroy()
+        {
+            if (instance == this) instance = null;
         }
     }
 }

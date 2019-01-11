@@ -5,6 +5,9 @@ using UnityEngine.Events;
 
 namespace HoloLensModule.Input
 {
+    /// <summary>
+    /// 動作確認用ボタン入力クラス
+    /// </summary>
     public class ButtonControl : ButtonControlBaseClass
     {
         protected override void ClickButton()
@@ -24,13 +27,19 @@ namespace HoloLensModule.Input
         }
     }
 
+    /// <summary>
+    /// Gazeと入力操作に対する動作の基底クラス
+    /// </summary>
     public abstract class ButtonControlBaseClass : MonoBehaviour, IFocusInterface, IClickInterface
     {
-
+        /// <summary>
+        /// 対象オブジェクトをクリックされた時のイベント
+        /// </summary>
         public UnityEvent ClickEvent;
 
+        #region Private Function
         private bool isFocus = false;
-        public void RaycastClick()
+        public void OnClick()
         {
             ClickButton();
             if (ClickEvent != null) ClickEvent.Invoke();
@@ -53,10 +62,23 @@ namespace HoloLensModule.Input
         {
             if (isFocus == true) FocusUpdate();
         }
+        #endregion
 
+        /// <summary>
+        /// GazeのFocusに入った時の関数
+        /// </summary>
         protected abstract void FocusIn();
+        /// <summary>
+        /// GazeのFocusに入っている間呼び出される関数
+        /// </summary>
         protected abstract void FocusUpdate();
+        /// <summary>
+        /// GazeのFocusから外れた時の関数
+        /// </summary>
         protected abstract void FocusOut();
+        /// <summary>
+        /// クリックされた時の関数
+        /// </summary>
         protected abstract void ClickButton();
     }
 }

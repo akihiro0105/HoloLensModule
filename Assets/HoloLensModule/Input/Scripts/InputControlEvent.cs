@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using HoloLensModule.Utility;
 using UnityEngine;
 #if UNITY_2017_2_OR_NEWER
 using UnityEngine.XR.WSA;
@@ -57,15 +58,14 @@ namespace HoloLensModule.Input
             {
                 RightHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.MOTIONCONTROLER);
                 LeftHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.MOTIONCONTROLER);
-                RayCastControl.Instance.SetRaycastSourceObject(RightHandObject);
+                RayCastControl.Instance.SetRaycastSourceObject(RightHandObject.transform, -4.0f / 3.0f);
                 RayCastControl.Instance.isActiveLine = true;
-                RayCastControl.Instance.deltaUp = -4.0f / 3.0f;
             }
             else
             {
                 RightHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.HAND);
                 LeftHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.HAND);
-                RayCastControl.Instance.SetRaycastSourceObject(Camera.main.transform.gameObject);
+                RayCastControl.Instance.SetRaycastSourceObject(Camera.main.transform);
             }
             RightHand.SetActive(false);
             LeftHand.SetActive(false);
@@ -223,11 +223,11 @@ namespace HoloLensModule.Input
             {
                 if (obj.state.source.handedness == InteractionSourceHandedness.Right)
                 {
-                    RayCastControl.Instance.SetRaycastSourceObject(RightHandObject);
+                    RayCastControl.Instance.SetRaycastSourceObject(RightHandObject.transform);
                 }
                 else
                 {
-                    RayCastControl.Instance.SetRaycastSourceObject(LeftHandObject);
+                    RayCastControl.Instance.SetRaycastSourceObject(LeftHandObject.transform);
                 }
                 if (obj.pressType == InteractionSourcePressType.Select)
                 {
@@ -259,7 +259,7 @@ namespace HoloLensModule.Input
                 {
                     if (ClickEvent != null) ClickEvent();
                     var iinterface = RayCastControl.Instance.SearchInterface<IClickInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                    if (iinterface != null) iinterface.RaycastClick();
+                    if (iinterface != null) iinterface.OnClick();
                 }
                 if (obj.state.source.id.ToString() == RightHand.name)
                 {
@@ -277,7 +277,7 @@ namespace HoloLensModule.Input
                 {
                     if (ClickEvent != null) ClickEvent();
                     var iinterface = RayCastControl.Instance.SearchInterface<IClickInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                    if (iinterface != null) iinterface.RaycastClick();
+                    if (iinterface != null) iinterface.OnClick();
                     if (obj.state.source.handedness == InteractionSourceHandedness.Right)
                     {
                         if (ReleaseEvent != null) ReleaseEvent(true);
@@ -294,16 +294,5 @@ namespace HoloLensModule.Input
             if (leftHandDragInterface != null) leftHandDragInterface = null;
         }
         #endregion
-    }
-
-    public interface IClickInterface
-    {
-        void RaycastClick();
-    }
-
-    public interface IDragInterface
-    {
-        void StartDrag(Vector3 pos, Quaternion? rot = null);
-        void UpdateDrag(Vector3 pos, Quaternion? rot = null);
     }
 }

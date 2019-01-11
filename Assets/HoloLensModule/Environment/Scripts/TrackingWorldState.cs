@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 #if UNITY_2017_2_OR_NEWER
@@ -9,11 +10,12 @@ using UnityEngine.VR.WSA;
 
 namespace HoloLensModule.Environment
 {
+    /// <summary>
+    /// HoloLensのトラッキング情報の取得
+    /// </summary>
     public class TrackingWorldState : MonoBehaviour
     {
-
-        public delegate void TrackingWorldStateEventHandler();
-        public TrackingWorldStateEventHandler LostTrackingWorldStateEvent;
+        public event Action LostTrackingWorldStateEvent;
 
         // Use this for initialization
         void Start()
@@ -26,6 +28,11 @@ namespace HoloLensModule.Environment
             WorldManager.OnPositionalLocatorStateChanged -= OnPositionalLocatorStateChanged;
         }
 
+        /// <summary>
+        /// トラッキングロスト時にイベント通知
+        /// </summary>
+        /// <param name="oldstate"></param>
+        /// <param name="newstate"></param>
         private void OnPositionalLocatorStateChanged(PositionalLocatorState oldstate, PositionalLocatorState newstate)
         {
             if (newstate != PositionalLocatorState.Active)

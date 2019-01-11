@@ -5,25 +5,30 @@ using System.IO;
 using System.Threading.Tasks;
 using Windows.Networking;
 using Windows.Networking.Sockets;
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
 using System.Threading;
 using System.Net.Sockets;
 #endif
 
 namespace HoloLensModule.Network
 {
+    /// <summary>
+    /// UDP送信
+    /// </summary>
     public class UDPSenderManager
     {
 
 #if WINDOWS_UWP
         private StreamWriter writer = null;
         private Task task = null;
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
         private Thread thread = null;
-    private UdpClient udpclient = null;
+        private UdpClient udpclient = null;
 #endif
 
-        public UDPSenderManager() { }
+        public UDPSenderManager()
+        {
+        }
 
         public UDPSenderManager(string ipaddress, int port)
         {
@@ -39,7 +44,7 @@ namespace HoloLensModule.Network
                    var datagram = await socket.GetOutputStreamAsync(new HostName(ipaddress), port.ToString());
                    writer = new StreamWriter(datagram.AsStreamForWrite());
                });
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
             if (udpclient == null)
             {
                 udpclient = new UdpClient();
@@ -51,8 +56,7 @@ namespace HoloLensModule.Network
 
         public bool SendMessage(string ms)
         {
-            byte[] bytes = Encoding.UTF8.GetBytes(ms);
-            return SendMessage(bytes);
+            return SendMessage(Encoding.UTF8.GetBytes(ms));
         }
 
         public bool SendMessage(byte[] data)
@@ -70,16 +74,13 @@ namespace HoloLensModule.Network
                     return true;
                 }
             }
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
             if (thread == null || thread.ThreadState != ThreadState.Running)
-        {
-            thread = new Thread(() =>
             {
-                udpclient.Send(data, data.Length);
-            });
-            thread.Start();
-            return true;
-        }
+                thread = new Thread(() => udpclient.Send(data, data.Length));
+                thread.Start();
+                return true;
+            }
 #endif
             return false;
         }
@@ -88,12 +89,13 @@ namespace HoloLensModule.Network
         {
 #if WINDOWS_UWP
             task = null;
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
             if (udpclient != null)
             {
                 udpclient.Close();
                 udpclient = null;
             }
+
             if (thread != null)
             {
                 thread.Abort();

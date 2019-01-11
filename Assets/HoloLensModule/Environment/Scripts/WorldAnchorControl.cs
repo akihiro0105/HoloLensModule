@@ -11,19 +11,38 @@ using UnityEngine.VR.WSA.Persistence;
 
 namespace HoloLensModule.Environment
 {
+    /// <summary>
+    /// WorldAnchorを制御
+    /// </summary>
     public class WorldAnchorControl : MonoBehaviour
     {
+        /// <summary>
+        /// WorldAnchorの読み込みと保存を通知
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="go"></param>
+        /// <param name="success"></param>
         public delegate void WorldAnchorEventHandler(WorldAnchorControl self, GameObject go, bool success = true);
-        public WorldAnchorEventHandler LoadedEvent;
-        public WorldAnchorEventHandler SavedEvent;
+        public event WorldAnchorEventHandler LoadedEvent;
+        public event WorldAnchorEventHandler SavedEvent;
 
-        // worldanchorの全体コントロール
+        /// <summary>
+        /// WorldAnchorStore
+        /// </summary>
         private WorldAnchorStore anchorstore = null;
+
+        /// <summary>
+        /// WorldAnchor制御用命令
+        /// </summary>
         private enum AnchorState
         {
             Load,
             Save
         }
+
+        /// <summary>
+        /// WorldAnchor制御用クラス
+        /// </summary>
         private class AnchorControl
         {
             public AnchorState state;
@@ -34,18 +53,20 @@ namespace HoloLensModule.Environment
                 this.state = state;
             }
         }
+
+        /// <summary>
+        /// WorldAnchor制御用Queue
+        /// </summary>
         private Queue<AnchorControl> AnchorControlQueue = new Queue<AnchorControl>();
 
         void Start()
         {
-            WorldAnchorStore.GetAsync((store) =>
-            {
-                anchorstore = store;
-            });
+            WorldAnchorStore.GetAsync((store) => anchorstore = store);
         }
 
         void Update()
         {
+            // WorldAnchorの制御は時間がかかるためQueueで1frameで1つ処理を行う
             if (anchorstore != null)
             {
                 if (AnchorControlQueue.Count > 0)
@@ -54,10 +75,10 @@ namespace HoloLensModule.Environment
                     switch (anchor.state)
                     {
                         case AnchorState.Load:
-                            LoadAnchor(anchor.go);
+                            loadAnchor(anchor.go);
                             break;
                         case AnchorState.Save:
-                            SaveAnchor(anchor.go);
+                            saveAnchor(anchor.go);
                             break;
                     }
                 }
@@ -65,25 +86,45 @@ namespace HoloLensModule.Environment
         }
 
 #region Public Function
+        /// <summary>
+        /// 対象GameObjectのWorldAnchor読み込み
+        /// </summary>
+        /// <param name="go"></param>
         public void LoadWorldAnchor(GameObject go)
         {
             AnchorControlQueue.Enqueue(new AnchorControl(go, AnchorState.Load));
         }
 
+        /// <summary>
+        /// 対象GameObjectのWorldAnchor保存
+        /// </summary>
+        /// <param name="go"></param>
         public void SaveWorldAnchor(GameObject go)
         {
             AnchorControlQueue.Enqueue(new AnchorControl(go, AnchorState.Save));
         }
 
+        /// <summary>
+        /// 対象GameObjectのWorldAnchor削除
+        /// </summary>
+        /// <param name="go"></param>
         public void DeleteWorldAnchor(GameObject go)
         {
-            DeleteAnchor(go);
+            var anchor = go.GetComponent<WorldAnchor>();
+            if (anchor != null)
+            {
+                anchorstore.Delete(anchor.name);
+                DestroyImmediate(anchor);
+            }
         }
 #endregion
 
 #region Private Function
-
-        private void LoadAnchor(GameObject go)
+        /// <summary>
+        /// Queueで処理されるWorldAnchor読み込み
+        /// </summary>
+        /// <param name="go"></param>
+        private void loadAnchor(GameObject go)
         {
             var anchor = anchorstore.Load(go.name, go);
             if (anchor != null)
@@ -94,7 +135,7 @@ namespace HoloLensModule.Environment
                 }
                 else
                 {
-                    anchor.OnTrackingChanged += OnLoadTrackingChanged;
+                    anchor.OnTrackingChanged += onLoadTrackingChanged;
                 }
             }
             else
@@ -103,22 +144,28 @@ namespace HoloLensModule.Environment
             }
         }
 
-        private void OnLoadTrackingChanged(WorldAnchor self, bool located)
+        /// <summary>
+        /// WorldAnchor読み込みイベント
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="located"></param>
+        private void onLoadTrackingChanged(WorldAnchor self, bool located)
         {
             if (located == true)
             {
                 if (LoadedEvent != null) LoadedEvent(this, self.gameObject);
-                self.OnTrackingChanged -= OnLoadTrackingChanged;
+                self.OnTrackingChanged -= onLoadTrackingChanged;
             }
         }
 
-        private void SaveAnchor(GameObject go)
+        /// <summary>
+        /// Queueで処理されるWorldAnchor保存
+        /// </summary>
+        /// <param name="go"></param>
+        private void saveAnchor(GameObject go)
         {
             var anchor = go.GetComponent<WorldAnchor>();
-            if (anchor == null)
-            {
-                anchor = go.AddComponent<WorldAnchor>();
-            }
+            if (anchor == null) anchor = go.AddComponent<WorldAnchor>();
             anchor.name = go.name;
             if (anchor.isLocated == true)
             {
@@ -127,30 +174,24 @@ namespace HoloLensModule.Environment
             }
             else
             {
-                anchor.OnTrackingChanged += OnSaveTrackingChanged;
+                anchor.OnTrackingChanged += onSaveTrackingChanged;
             }
         }
 
-        private void OnSaveTrackingChanged(WorldAnchor self, bool located)
+        /// <summary>
+        /// WorldAnchor保存イベント
+        /// </summary>
+        /// <param name="self"></param>
+        /// <param name="located"></param>
+        private void onSaveTrackingChanged(WorldAnchor self, bool located)
         {
             if (located == true)
             {
                 var success = anchorstore.Save(self.name, self);
                 if (SavedEvent != null) SavedEvent(this, self.gameObject, success);
-                self.OnTrackingChanged -= OnSaveTrackingChanged;
+                self.OnTrackingChanged -= onSaveTrackingChanged;
             }
         }
-
-        private void DeleteAnchor(GameObject go)
-        {
-            var anchor = go.GetComponent<WorldAnchor>();
-            if (anchor != null)
-            {
-                anchorstore.Delete(anchor.name);
-                DestroyImmediate(anchor);
-            }
-        }
-
 #endregion
     }
 }

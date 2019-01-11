@@ -7,6 +7,9 @@ using UnityEngine.XR.WSA;
 
 namespace HoloLensModule.Utility
 {
+    /// <summary>
+    /// カメラの設定をHoloLensとWindows MRデバイスで分ける処理
+    /// </summary>
     public class SkyboxSetting : MonoBehaviour
     {
 
@@ -14,7 +17,7 @@ namespace HoloLensModule.Utility
         void Start()
         {
 #if UNITY_2017_2_OR_NEWER
-            Camera.main.clearFlags = (HolographicSettings.IsDisplayOpaque == true) ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
+            Camera.main.clearFlags = (HolographicSettings.IsDisplayOpaque) ? CameraClearFlags.Skybox : CameraClearFlags.SolidColor;
 #endif
         }
     }

@@ -1,64 +1,110 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using HoloLensModule.Utility;
 
 namespace HoloLensModule.Input
 {
+    /// <summary>
+    /// 指定ObjectからのGaze機能
+    /// </summary>
     public class RayCastControl : HoloLensModuleSingleton<RayCastControl>
     {
-        [SerializeField]
-        private GameObject RaycastSourceObject = null;
-        public float MoveSpeed = 2.0f;
-        [SerializeField]
-        private GameObject RaycastHitObject = null;
-        public bool isActiveLine = false;
-        public Material LineRendererMaterial;
-        public float deltaUp = 0.0f;
+        /// <summary>
+        /// Gazeの照射元
+        /// </summary>
+        [SerializeField] private Transform raycastSource = null;
 
-        public delegate void RaycastHitEventHandler(GameObject go);
+        /// <summary>
+        /// Gazeの移動速度
+        /// </summary>
+        [SerializeField]private float moveSpeed = 2.0f;
+
+        /// <summary>
+        /// Gazeサークル
+        /// </summary>
+        [SerializeField] private GameObject raycastHitObject = null;
+
+        /// <summary>
+        /// Gazeラインの表示，非表示
+        /// </summary>
+        public bool isActiveLine = false;
+
+        /// <summary>
+        /// Gazeラインのマテリアル
+        /// </summary>
+        [SerializeField]private Material lineRendererMaterial;
+
+        /// <summary>
+        /// Gaze上方向微調整用
+        /// </summary>
+        [SerializeField]private float deltaUp = 0.0f;
+
+        /// <summary>
+        /// Gazeヒット用イベント
+        /// </summary>
+        /// <param name="hit"></param>
+        public delegate void RaycastHitEventHandler(Transform hit);
         public RaycastHitEventHandler RaycastHitEvent;
 
-        public void SetRaycastSourceObject(GameObject source)
+        /// <summary>
+        /// Gaze照射元設定
+        /// </summary>
+        /// <param name="source"></param>
+        public void SetRaycastSourceObject(Transform source,float? delta=null)
         {
-            RaycastSourceObject = source;
-            currentFront = RaycastSourceObject.transform.forward + RaycastSourceObject.transform.up * deltaUp;
+            if (delta != null) deltaUp = delta.Value;
+            raycastSource = source;
+            currentFront = raycastSource.forward + raycastSource.up * deltaUp;
         }
+
+        /// <summary>
+        /// Gazeのヒット対象オブジェクトを取得
+        /// </summary>
+        /// <returns></returns>
         public GameObject GetRaycastHitObject()
         {
             return currentHitObject;
         }
+        private GameObject currentHitObject = null;
+
+        /// <summary>
+        /// Gazeのヒット位置を取得
+        /// </summary>
+        /// <returns></returns>
         public Vector3? GetRaycastHitPoint()
         {
             return hitpoint;
         }
-
-        #region Private Function
-        private Vector3 currentFront;
-        private GameObject currentHitObject = null;
         private Vector3? hitpoint = null;
-        private LineRenderer lineRenderer;
+
+        /// <summary>
+        /// 移動補正後のGaze正面方向
+        /// </summary>
+        private Vector3 currentFront;
 
         // Use this for initialization
         void Start()
         {
-            if (RaycastSourceObject != null) SetRaycastSourceObject(RaycastSourceObject);
-            InitLinerenderer();
+            if (raycastSource != null) SetRaycastSourceObject(raycastSource);
+            initLinerenderer();
         }
 
         // Update is called once per frame
         void Update()
         {
-            if (RaycastSourceObject != null)
+            // Gaze判定と通知
+            if (raycastSource != null)
             {
-                var forward = RaycastSourceObject.transform.forward + RaycastSourceObject.transform.up * deltaUp;
-                currentFront = Vector3.Lerp(currentFront, forward, Time.deltaTime * MoveSpeed);
+                var forward = raycastSource.forward + raycastSource.up * deltaUp;
+                currentFront = Vector3.Lerp(currentFront, forward, Time.deltaTime * moveSpeed);
                 RaycastHit hitinfo;
-                if (Physics.Raycast(RaycastSourceObject.transform.position, currentFront, out hitinfo, 30.0f))
+                if (Physics.Raycast(raycastSource.position, currentFront, out hitinfo, 30.0f))
                 {
                     if (currentHitObject == null || currentHitObject != hitinfo.transform.gameObject)
                     {
                         Debug.Log(hitinfo.transform.gameObject.name);
-                        if (RaycastHitEvent != null) RaycastHitEvent(hitinfo.transform.gameObject);
+                        if (RaycastHitEvent != null) RaycastHitEvent(hitinfo.transform);
                         var iout = SearchInterface<IFocusInterface>(currentHitObject);
                         if (iout != null) iout.RaycastOut();
                         var ihit = SearchInterface<IFocusInterface>(hitinfo.transform.gameObject);
@@ -75,53 +121,72 @@ namespace HoloLensModule.Input
                     currentHitObject = null;
                     hitpoint = null;
                 }
-                UpdateRaycastHitObject();
-                UpdateLinerenderer();
             }
-        }
 
-        private void UpdateRaycastHitObject()
-        {
-            if (RaycastHitObject != null)
+            // Gazeサークルの表示切替
+            if (raycastHitObject != null)
             {
-                if (hitpoint != null)
+                if (raycastSource != null && hitpoint != null)
                 {
-                    RaycastHitObject.SetActive(true);
-                    RaycastHitObject.transform.position = hitpoint.Value;
-                    RaycastHitObject.transform.LookAt(RaycastSourceObject.transform.position);
+                    raycastHitObject.SetActive(true);
+                    raycastHitObject.transform.position = hitpoint.Value;
+                    raycastHitObject.transform.LookAt(raycastSource.position);
                 }
                 else
                 {
-                    RaycastHitObject.SetActive(false);
+                    raycastHitObject.SetActive(false);
                 }
             }
+
+            // Raycastの導線を描画
+            if (raycastSource != null && isActiveLine == true)
+                updateLinerenderer(raycastSource.position, hitpoint ?? raycastSource.position + currentFront);
+            else updateLinerenderer();
         }
 
-        private void InitLinerenderer()
+
+        #region LineRenderer Function
+
+        private LineRenderer lineRenderer;
+
+        /// <summary>
+        /// Gazeラインの初期化
+        /// </summary>
+        private void initLinerenderer()
         {
             lineRenderer = gameObject.AddComponent<LineRenderer>();
-            lineRenderer.material = LineRendererMaterial;
+            lineRenderer.material = lineRendererMaterial;
             lineRenderer.useWorldSpace = true;
             lineRenderer.widthMultiplier = 0.0005f;
             lineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             lineRenderer.receiveShadows = false;
         }
 
-        private void UpdateLinerenderer()
+        /// <summary>
+        /// Gazeラインの更新
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="target"></param>
+        private void updateLinerenderer(Vector3 source, Vector3 target)
         {
-            if (isActiveLine == true)
-            {
-                lineRenderer.positionCount = 2;
-                lineRenderer.SetPosition(0, RaycastSourceObject.transform.position);
-                lineRenderer.SetPosition(1, (hitpoint != null) ? hitpoint.Value : RaycastSourceObject.transform.position + currentFront);
-            }
-            else
-            {
-                lineRenderer.positionCount = 0;
-            }
+            lineRenderer.positionCount = 2;
+            lineRenderer.SetPosition(0, source);
+            lineRenderer.SetPosition(1, target);
         }
+
+        private void updateLinerenderer()
+        {
+            lineRenderer.positionCount = 0;
+        }
+
         #endregion
 
+        /// <summary>
+        /// 指定Interfaceの探索
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="go"></param>
+        /// <returns></returns>
         public T SearchInterface<T>(GameObject go)
         {
             if (go == null) return default(T);
@@ -135,11 +200,5 @@ namespace HoloLensModule.Input
                 return buf;
             }
         }
-    }
-
-    public interface IFocusInterface
-    {
-        void RaycastHit();
-        void RaycastOut();
     }
 }
