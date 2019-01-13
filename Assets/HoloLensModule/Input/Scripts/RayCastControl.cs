@@ -8,7 +8,7 @@ namespace HoloLensModule.Input
     /// <summary>
     /// 指定ObjectからのGaze機能
     /// </summary>
-    public class RayCastControl : HoloLensModuleSingleton<RayCastControl>
+    public class RayCastControl :MonoBehaviour
     {
         /// <summary>
         /// Gazeの照射元
@@ -41,6 +41,23 @@ namespace HoloLensModule.Input
         [SerializeField]private float deltaUp = 0.0f;
 
         /// <summary>
+        /// Gazeのヒット対象オブジェクトを取得
+        /// </summary>
+        /// <returns></returns>
+        private GameObject currentHitObject = null;
+
+        /// <summary>
+        /// Gazeのヒット位置を取得
+        /// </summary>
+        /// <returns></returns>
+        private Vector3? hitpoint = null;
+
+        /// <summary>
+        /// 移動補正後のGaze正面方向
+        /// </summary>
+        private Vector3 currentFront;
+
+        /// <summary>
         /// Gazeヒット用イベント
         /// </summary>
         /// <param name="hit"></param>
@@ -57,31 +74,6 @@ namespace HoloLensModule.Input
             raycastSource = source;
             currentFront = raycastSource.forward + raycastSource.up * deltaUp;
         }
-
-        /// <summary>
-        /// Gazeのヒット対象オブジェクトを取得
-        /// </summary>
-        /// <returns></returns>
-        public GameObject GetRaycastHitObject()
-        {
-            return currentHitObject;
-        }
-        private GameObject currentHitObject = null;
-
-        /// <summary>
-        /// Gazeのヒット位置を取得
-        /// </summary>
-        /// <returns></returns>
-        public Vector3? GetRaycastHitPoint()
-        {
-            return hitpoint;
-        }
-        private Vector3? hitpoint = null;
-
-        /// <summary>
-        /// 移動補正後のGaze正面方向
-        /// </summary>
-        private Vector3 currentFront;
 
         // Use this for initialization
         void Start()
@@ -105,9 +97,9 @@ namespace HoloLensModule.Input
                     {
                         Debug.Log(hitinfo.transform.gameObject.name);
                         if (RaycastHitEvent != null) RaycastHitEvent(hitinfo.transform);
-                        var iout = SearchInterface<IFocusInterface>(currentHitObject);
+                        var iout = searchInterface<IFocusInterface>(currentHitObject);
                         if (iout != null) iout.RaycastOut();
-                        var ihit = SearchInterface<IFocusInterface>(hitinfo.transform.gameObject);
+                        var ihit = searchInterface<IFocusInterface>(hitinfo.transform.gameObject);
                         if (ihit != null) ihit.RaycastHit();
                     }
                     currentHitObject = hitinfo.transform.gameObject;
@@ -116,7 +108,7 @@ namespace HoloLensModule.Input
                 else
                 {
                     if (RaycastHitEvent != null) RaycastHitEvent(null);
-                    var iout = SearchInterface<IFocusInterface>(currentHitObject);
+                    var iout = searchInterface<IFocusInterface>(currentHitObject);
                     if (iout != null) iout.RaycastOut();
                     currentHitObject = null;
                     hitpoint = null;
@@ -187,18 +179,23 @@ namespace HoloLensModule.Input
         /// <typeparam name="T"></typeparam>
         /// <param name="go"></param>
         /// <returns></returns>
-        public T SearchInterface<T>(GameObject go)
+        private T searchInterface<T>(GameObject go)
         {
             if (go == null) return default(T);
             var buf = go.GetComponent<T>();
             if (buf == null)
-            {
-                return (go.transform.parent == null) ? default(T) : SearchInterface<T>(go.transform.parent.gameObject);
-            }
-            else
-            {
-                return buf;
-            }
+                return (go.transform.parent == null) ? default(T) : searchInterface<T>(go.transform.parent.gameObject);
+            else return buf;
+        }
+
+        /// <summary>
+        /// Gazeが当たっているオブジェクトから指定Interfaceを取得
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public T GetRaycastHitInterface<T>()
+        {
+            return searchInterface<T>(currentHitObject);
         }
     }
 }

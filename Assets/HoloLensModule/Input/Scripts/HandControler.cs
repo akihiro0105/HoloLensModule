@@ -17,8 +17,8 @@ namespace HoloLensModule.Input
         /// <summary>
         /// HoloLensとWindows MRのハンド選択位置オブジェクトをアタッチ
         /// </summary>
-        [SerializeField] private GameObject HoloLensHandPoint;
-        [SerializeField] private GameObject MotionControlerPoint;
+        [SerializeField] private Transform HoloLensHandPoint;
+        [SerializeField] private Transform MotionControlerPoint;
 
         /// <summary>
         /// ハンドトラッキングタイプ
@@ -41,27 +41,21 @@ namespace HoloLensModule.Input
         }
 
         /// <summary>
-        /// ハンドの表示，非表示を切り替え
+        /// ハンド位置を設定
         /// </summary>
-        /// <param name="flag"></param>
-        public void isView(bool flag)
+        /// <param name="pos"></param>
+        /// <param name="rot"></param>
+        public void SetHandPoint(Vector3 pos, Quaternion? rot = null)
         {
-            if (flag == false)
-            {
-                HoloLensHandModel.SetActive(false);
-                MotionControlerModel.SetActive(false);
-            }
-            else
-            {
-                SetHandType(Type);
-            }
+            transform.position = pos;
+            if (rot != null) transform.rotation = rot.Value;
         }
 
         /// <summary>
-        /// ハンドの位置を取得
+        /// ハンドのGaze発信元位置を取得
         /// </summary>
         /// <returns></returns>
-        public GameObject GetHandPoint()
+        public Transform GetGazeSourcePoint()
         {
             return (Type == HandType.HAND) ? HoloLensHandPoint : MotionControlerPoint;
         }

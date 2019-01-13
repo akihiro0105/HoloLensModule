@@ -7,14 +7,14 @@ namespace HoloLensModule.Input
     /// <summary>
     /// Input入力に対するInterface
     /// </summary>
-    public interface IClickInterface
+    public interface IClickGestureInterface
     {
         void OnClick();
     }
 
-    public interface IDragInterface
+    public interface IDragGestureInterface
     {
-        void StartDrag(Vector3 pos, Quaternion? rot = null);
-        void UpdateDrag(Vector3 pos, Quaternion? rot = null);
+        void OnStartDrag(Vector3 pos, Quaternion? rot = null);
+        void OnUpdateDrag(Vector3 pos, Quaternion? rot = null);
     }
 }

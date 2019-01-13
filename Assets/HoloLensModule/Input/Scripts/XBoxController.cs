@@ -148,7 +148,7 @@ namespace HoloLensModule.Input
         /// <param name="x"></param>
         public void GetLogButton(XBoxInput x)
         {
-            Debug.Log(x.ToString());
+            if (x != XBoxInput.None) Debug.Log(x.ToString());
         }
 
         /// <summary>

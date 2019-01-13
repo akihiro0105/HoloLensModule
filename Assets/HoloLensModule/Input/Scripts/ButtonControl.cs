@@ -30,7 +30,7 @@ namespace HoloLensModule.Input
     /// <summary>
     /// Gazeと入力操作に対する動作の基底クラス
     /// </summary>
-    public abstract class ButtonControlBaseClass : MonoBehaviour, IFocusInterface, IClickInterface
+    public abstract class ButtonControlBaseClass : MonoBehaviour, IFocusInterface, IClickGestureInterface
     {
         /// <summary>
         /// 対象オブジェクトをクリックされた時のイベント
@@ -80,5 +80,13 @@ namespace HoloLensModule.Input
         /// クリックされた時の関数
         /// </summary>
         protected abstract void ClickButton();
+
+        /// <summary>
+        /// クリック動作確認用
+        /// </summary>
+        protected void DebugLog()
+        {
+            Debug.Log("OnClick");
+        }
     }
 }

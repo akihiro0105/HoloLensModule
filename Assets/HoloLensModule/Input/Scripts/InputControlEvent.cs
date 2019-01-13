@@ -13,286 +13,186 @@ using UnityEngine.VR.WSA.Input;
 // No support under UNITY_2017_2
 namespace HoloLensModule.Input
 {
-    public class InputControlEvent : HoloLensModuleSingleton<InputControlEvent>
+    /// <summary>
+    /// HoloLens,Windows MRデバイスの入力
+    /// </summary>
+    public class InputControlEvent : MonoBehaviour
     {
-        [SerializeField]
-        private GameObject RightHand;
-        [SerializeField]
-        private GameObject LeftHand;
-        [SerializeField]
-        private GameObject HoloLensMultiHandImage;
+        /// <summary>
+        /// Gaze用Raycast機能
+        /// </summary>
+        [SerializeField] private RayCastControl rayCastControl;
 
-        public delegate void InteractionHandActionEventHandler(bool? isRight = null);
-        public InteractionHandActionEventHandler ClickEvent;
-        public InteractionHandActionEventHandler DetectEvent;
-        public InteractionHandActionEventHandler LostEvent;
-        public InteractionHandActionEventHandler UpdateEvent;
-        public InteractionHandActionEventHandler PressEvent;
-        public InteractionHandActionEventHandler ReleaseEvent;
+        /// <summary>
+        /// 右手ハンド
+        /// </summary>
+        [SerializeField] private HandControler rightHand;
 
-        public bool RightPressFlag { get; private set; }
-        public GameObject RightHandObject { get { return RightHand.GetComponent<HandControler>().GetHandPoint(); } }
-        public bool RightHandActive { get { return RightHand.activeSelf; } }
-        public bool LeftPressFlag { get; private set; }
-        public GameObject LeftHandObject { get { return LeftHand.GetComponent<HandControler>().GetHandPoint(); } }
-        public bool LeftHandActive { get { return LeftHand.activeSelf; } }
-        public bool MultiHandFlag
+        /// <summary>
+        /// 左手ハンド
+        /// </summary>
+        [SerializeField] private HandControler leftHand;
+
+        /// <summary>
+        /// HoloLens両手用イメージ
+        /// </summary>
+        [SerializeField] private GameObject multiHandImage;
+
+        /// <summary>
+        /// HoloLens用両手
+        /// </summary>
+        private bool multiHandFlag
         {
-            get { return (HoloLensMultiHandImage != null) ? HoloLensMultiHandImage.activeSelf : false; }
-            private set { if (HoloLensMultiHandImage != null) HoloLensMultiHandImage.SetActive(value); }
+            get { return (multiHandImage != null) && multiHandImage.activeSelf; }
+            set
+            {
+                if (multiHandImage != null) multiHandImage.SetActive(value);
+            }
         }
-        public void SetHandView(bool flag)
-        {
-            RightHand.GetComponent<HandControler>().isView(flag);
-            LeftHand.GetComponent<HandControler>().isView(flag);
-        }
-
-        #region Private function
-        private IDragInterface rightHandDragInterface = null;
-        private IDragInterface leftHandDragInterface = null;
 
         // Use this for initialization
         void Start()
         {
-            if (HolographicSettings.IsDisplayOpaque == true)
-            {
-                RightHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.MOTIONCONTROLER);
-                LeftHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.MOTIONCONTROLER);
-                RayCastControl.Instance.SetRaycastSourceObject(RightHandObject.transform, -4.0f / 3.0f);
-                RayCastControl.Instance.isActiveLine = true;
-            }
-            else
-            {
-                RightHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.HAND);
-                LeftHand.GetComponent<HandControler>().SetHandType(HandControler.HandType.HAND);
-                RayCastControl.Instance.SetRaycastSourceObject(Camera.main.transform);
-            }
-            RightHand.SetActive(false);
-            LeftHand.SetActive(false);
-            RightPressFlag = false;
-            LeftPressFlag = false;
-            MultiHandFlag = false;
-
-            InteractionManager.InteractionSourceDetected += InteractionSourceDetected;
-            InteractionManager.InteractionSourceUpdated += InteractionSourceUpdated;
-            InteractionManager.InteractionSourceLost += InteractionSourceLost;
-            InteractionManager.InteractionSourcePressed += InteractionSourcePressed;
-            InteractionManager.InteractionSourceReleased += InteractionSourceReleased;
+            // HoloLensとWindows MRのイベント切替
+            if (HolographicSettings.IsDisplayOpaque == true) initWinMRSetting();
+            else initHoloLensSetting();
+            // 共通初期化処理
+            rightHand.gameObject.SetActive(false);
+            leftHand.gameObject.SetActive(false);
+            multiHandFlag = false;
         }
 
-        protected override void OnDestroy()
+        /// <summary>
+        /// HoloLensの入力動作を定義
+        /// </summary>
+        private void initHoloLensSetting()
         {
-            InteractionManager.InteractionSourceDetected -= InteractionSourceDetected;
-            InteractionManager.InteractionSourceUpdated -= InteractionSourceUpdated;
-            InteractionManager.InteractionSourceLost -= InteractionSourceLost;
-            InteractionManager.InteractionSourcePressed -= InteractionSourcePressed;
-            InteractionManager.InteractionSourceReleased -= InteractionSourceReleased;
-            base.OnDestroy();
-        }
+            // 初期化処理
+            IDragGestureInterface dragInterface = null;
+            rightHand.SetHandType(HandControler.HandType.HAND);
+            leftHand.SetHandType(HandControler.HandType.HAND);
+            rayCastControl.SetRaycastSourceObject(Camera.main.transform);
 
-        private void SetHandPosition(InteractionSourceState state)
-        {
-            Vector3 pos;
-            if (state.sourcePose.TryGetPosition(out pos))
+            Vector3 inputPos;
+            // ハンド発見時の動作を定義
+            InteractionManager.InteractionSourceDetected += (obj) =>
             {
-                if (state.source.handedness == InteractionSourceHandedness.Unknown)
+                if (obj.state.sourcePose.TryGetPosition(out inputPos))
                 {
-                    if (state.source.id.ToString() == RightHand.name)
+                    var hand = rightHand.gameObject.activeSelf ? leftHand : rightHand;
+                    hand.name = obj.state.source.id.ToString();
+                    hand.gameObject.SetActive(true);
+                    hand.SetHandPoint(inputPos);
+                }
+            };
+            // ハンド移動時の動作を定義
+            InteractionManager.InteractionSourceUpdated += (obj) =>
+            {
+                if (obj.state.sourcePose.TryGetPosition(out inputPos))
+                {
+                    (obj.state.source.id.ToString() == rightHand.name ? rightHand : leftHand).SetHandPoint(inputPos);
+                    multiHandFlag = rightHand.gameObject.activeSelf && leftHand.gameObject.activeSelf;
+                    if (dragInterface != null) dragInterface.OnUpdateDrag(rightHand.transform.position);
+                    if (!rightHand.gameObject.activeSelf && !leftHand.gameObject.activeSelf)
                     {
-                        RightHand.transform.position = pos;
-                    }
-                    else
-                    {
-                        LeftHand.transform.position = pos;
+                        rightHand.gameObject.SetActive(true);
+                        rightHand.name = obj.state.source.id.ToString();
                     }
                 }
-                else
-                {
-                    Quaternion rot;
-                    state.sourcePose.TryGetRotation(out rot);
-                    if (state.source.handedness == InteractionSourceHandedness.Right)
-                    {
-                        RightHand.transform.SetPositionAndRotation(pos, rot);
-                    }
-                    else
-                    {
-                        LeftHand.transform.SetPositionAndRotation(pos, rot);
-                    }
-                }
-            }
+            };
+            // ハンドロスト時の動作を定義
+            InteractionManager.InteractionSourceLost += (obj) =>
+            {
+                (obj.state.source.id.ToString() == rightHand.name ? rightHand : leftHand).gameObject
+                    .SetActive(false);
+                multiHandFlag = false;
+                dragInterface = null;
+            };
+            // ハンド入力時の動作を定義
+            InteractionManager.InteractionSourcePressed += (obj) =>
+            {
+                dragInterface = rayCastControl.GetRaycastHitInterface<IDragGestureInterface>();
+                if (dragInterface != null) dragInterface.OnStartDrag(rightHand.GetGazeSourcePoint().position);
+            };
+            // ハンド入力解放時の動作を定義
+            InteractionManager.InteractionSourceReleased += (obj) =>
+            {
+                var iClick = rayCastControl.GetRaycastHitInterface<IClickGestureInterface>();
+                if (multiHandFlag == false && iClick != null) iClick.OnClick();
+                dragInterface = null;
+            };
         }
 
-        private void InteractionSourceDetected(InteractionSourceDetectedEventArgs obj)
+        /// <summary>
+        /// WindowsMRの入力動作を定義
+        /// </summary>
+        private void initWinMRSetting()
         {
-            if (obj.state.source.handedness == InteractionSourceHandedness.Right)
-            {
-                RightHand.SetActive(true);
-            }
-            else if (obj.state.source.handedness == InteractionSourceHandedness.Left)
-            {
-                LeftHand.SetActive(true);
-            }
-            else
-            {
-                if (RightHand.activeSelf == true)
-                {
-                    LeftHand.SetActive(true);
-                    LeftHand.name = obj.state.source.id.ToString();
-                }
-                else
-                {
-                    RightHand.SetActive(true);
-                    RightHand.name = obj.state.source.id.ToString();
-                }
-            }
-            SetHandPosition(obj.state);
-            if (DetectEvent != null) DetectEvent();
-        }
+            // 初期化処理
+            IDragGestureInterface rightInterface = null;
+            IDragGestureInterface leftInterface = null;
+            rightHand.SetHandType(HandControler.HandType.MOTIONCONTROLER);
+            leftHand.SetHandType(HandControler.HandType.MOTIONCONTROLER);
+            rayCastControl.SetRaycastSourceObject(rightHand.GetGazeSourcePoint(), -4.0f / 3.0f);
+            rayCastControl.isActiveLine = true;
 
-        private void InteractionSourceUpdated(InteractionSourceUpdatedEventArgs obj)
-        {
-            SetHandPosition(obj.state);
-            if (obj.state.source.handedness == InteractionSourceHandedness.Unknown)
+            Vector3 inputPos;
+            Quaternion inputRot;
+            // ハンド発見時の動作を定義
+            InteractionManager.InteractionSourceDetected += (obj) =>
             {
-                MultiHandFlag = (RightHand.activeSelf == true && LeftHand.activeSelf == true) ? true : false;
-                if (UpdateEvent != null) UpdateEvent();
-                if (rightHandDragInterface != null) rightHandDragInterface.UpdateDrag(RightHand.transform.position);
-                if (RightHand.activeSelf == false && LeftHand.activeSelf == false)
+                if (obj.state.sourcePose.TryGetPosition(out inputPos) &&
+                    obj.state.sourcePose.TryGetRotation(out inputRot))
                 {
-                    RightHand.SetActive(true);
-                    RightHand.name = obj.state.source.id.ToString();
+                    var hand = obj.state.source.handedness == InteractionSourceHandedness.Right ? rightHand : leftHand;
+                    hand.gameObject.SetActive(true);
+                    hand.SetHandPoint(inputPos, inputRot);
                 }
-            }
-            else
+            };
+            // ハンド移動時の動作を定義
+            InteractionManager.InteractionSourceUpdated += (obj) =>
             {
-                if (UpdateEvent != null) UpdateEvent((obj.state.source.handedness == InteractionSourceHandedness.Right) ? true : false);
-                if (rightHandDragInterface != null) rightHandDragInterface.UpdateDrag(RightHand.transform.position, RightHand.transform.rotation);
-                if (leftHandDragInterface != null) leftHandDragInterface.UpdateDrag(LeftHand.transform.position, LeftHand.transform.rotation);
-            }
-        }
-
-        private void InteractionSourceLost(InteractionSourceLostEventArgs obj)
-        {
-            if (obj.state.source.handedness == InteractionSourceHandedness.Right)
+                if (obj.state.sourcePose.TryGetPosition(out inputPos) &&
+                    obj.state.sourcePose.TryGetRotation(out inputRot))
+                {
+                    var hand = obj.state.source.handedness == InteractionSourceHandedness.Right ? rightHand : leftHand;
+                    hand.SetHandPoint(inputPos, inputRot);
+                    var handPos = hand.GetGazeSourcePoint();
+                    if (rightInterface != null) rightInterface.OnUpdateDrag(handPos.position, handPos.rotation);
+                    if (leftInterface != null) leftInterface.OnUpdateDrag(handPos.position, handPos.rotation);
+                }
+            };
+            // ハンドロスト時の動作を定義
+            InteractionManager.InteractionSourceLost += (obj) =>
             {
-                RightHand.SetActive(false);
-                RightPressFlag = false;
-            }
-            else if (obj.state.source.handedness == InteractionSourceHandedness.Left)
+                var hand = obj.state.source.handedness == InteractionSourceHandedness.Right ? rightHand : leftHand;
+                hand.gameObject.SetActive(false);
+                rightInterface = null;
+                leftInterface = null;
+            };
+            // ハンド入力時の動作を定義
+            InteractionManager.InteractionSourcePressed += (obj) =>
             {
-                LeftHand.SetActive(false);
-                LeftPressFlag = false;
-            }
-            else
-            {
-                if (obj.state.source.id.ToString() == RightHand.name)
-                {
-                    RightHand.SetActive(false);
-                    RightPressFlag = false;
-                }
-                else
-                {
-                    LeftHand.SetActive(false);
-                    LeftPressFlag = false;
-                }
-                MultiHandFlag = false;
-            }
-            if (LostEvent != null) LostEvent();
-            if (rightHandDragInterface != null) rightHandDragInterface = null;
-            if (leftHandDragInterface != null) leftHandDragInterface = null;
-        }
-
-        private void InteractionSourcePressed(InteractionSourcePressedEventArgs obj)
-        {
-            if (obj.state.source.handedness == InteractionSourceHandedness.Unknown)
-            {
-                if (obj.state.source.id.ToString() == RightHand.name)
-                {
-                    RightPressFlag = true;
-                }
-                else
-                {
-                    LeftPressFlag = true;
-                }
-                if (PressEvent != null) PressEvent();
-
-                rightHandDragInterface = RayCastControl.Instance.SearchInterface<IDragInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                if (rightHandDragInterface != null) rightHandDragInterface.StartDrag(RightHand.transform.position);
-            }
-            else
-            {
-                if (obj.state.source.handedness == InteractionSourceHandedness.Right)
-                {
-                    RayCastControl.Instance.SetRaycastSourceObject(RightHandObject.transform);
-                }
-                else
-                {
-                    RayCastControl.Instance.SetRaycastSourceObject(LeftHandObject.transform);
-                }
+                // 入力動作を行ったハンドに切り替え
+                var hand = obj.state.source.handedness == InteractionSourceHandedness.Right ? rightHand : leftHand;
+                var handPos = hand.GetGazeSourcePoint();
+                rayCastControl.SetRaycastSourceObject(handPos);
                 if (obj.pressType == InteractionSourcePressType.Select)
                 {
-                    if (obj.state.source.handedness == InteractionSourceHandedness.Right)
-                    {
-                        RightPressFlag = true;
-                        if (PressEvent != null) PressEvent(true);
-
-                        rightHandDragInterface = RayCastControl.Instance.SearchInterface<IDragInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                        if (rightHandDragInterface != null) rightHandDragInterface.StartDrag(RightHand.transform.position, RightHand.transform.rotation);
-                    }
-                    else
-                    {
-                        LeftPressFlag = true;
-                        if (PressEvent != null) PressEvent(false);
-
-                        leftHandDragInterface = RayCastControl.Instance.SearchInterface<IDragInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                        if (leftHandDragInterface != null) leftHandDragInterface.StartDrag(LeftHand.transform.position, LeftHand.transform.rotation);
-                    }
+                    var iDrag = rayCastControl.GetRaycastHitInterface<IDragGestureInterface>();
+                    if (obj.state.source.handedness == InteractionSourceHandedness.Right) rightInterface = iDrag;
+                    else leftInterface = iDrag;
+                    if (iDrag != null) iDrag.OnStartDrag(handPos.position, handPos.rotation);
                 }
-            }
-        }
-
-        private void InteractionSourceReleased(InteractionSourceReleasedEventArgs obj)
-        {
-            if (obj.state.source.handedness == InteractionSourceHandedness.Unknown)
+            };
+            // ハンド入力解放時の動作を定義
+            InteractionManager.InteractionSourceReleased += (obj) =>
             {
-                if (MultiHandFlag == false)
-                {
-                    if (ClickEvent != null) ClickEvent();
-                    var iinterface = RayCastControl.Instance.SearchInterface<IClickInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                    if (iinterface != null) iinterface.OnClick();
-                }
-                if (obj.state.source.id.ToString() == RightHand.name)
-                {
-                    RightPressFlag = false;
-                }
-                else
-                {
-                    LeftPressFlag = false;
-                }
-                if (ReleaseEvent != null) ReleaseEvent();
-            }
-            else
-            {
-                if (obj.pressType == InteractionSourcePressType.Select)
-                {
-                    if (ClickEvent != null) ClickEvent();
-                    var iinterface = RayCastControl.Instance.SearchInterface<IClickInterface>(RayCastControl.Instance.GetRaycastHitObject());
-                    if (iinterface != null) iinterface.OnClick();
-                    if (obj.state.source.handedness == InteractionSourceHandedness.Right)
-                    {
-                        if (ReleaseEvent != null) ReleaseEvent(true);
-                        RightPressFlag = false;
-                    }
-                    else
-                    {
-                        if (ReleaseEvent != null) ReleaseEvent(false);
-                        LeftPressFlag = false;
-                    }
-                }
-            }
-            if (rightHandDragInterface != null) rightHandDragInterface = null;
-            if (leftHandDragInterface != null) leftHandDragInterface = null;
+                var iClick = rayCastControl.GetRaycastHitInterface<IClickGestureInterface>();
+                if (obj.pressType == InteractionSourcePressType.Select && iClick != null) iClick.OnClick();
+                rightInterface = null;
+                leftInterface = null;
+            };
         }
-        #endregion
     }
 }
