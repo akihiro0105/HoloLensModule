@@ -2,26 +2,22 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Net;
-using System;
 #if WINDOWS_UWP
+using System;
 using Windows.Networking.Connectivity;
 using Windows.System.Diagnostics;
 #endif
 
 namespace HoloLensModule.Environment
 {
+    /// <summary>
+    /// デバイス情報に関するクラス
+    /// </summary>
     public class SystemInfomation
     {
-        // * アプリ終了
-        // * デバイス名 string
-        // * ネットワーク情報 ip subnetmask directedbroadcastaddress
-        // * バッテリー残量 %
-        // * Wifi情報(UWP)
-        // * アプリメモリ使用量
-        // bluetooth情報
-        // マスター音量 %
-        // ディスプレイ輝度 %
-
+        /// <summary>
+        /// アプリの終了
+        /// </summary>
         public static void AppExit()
         {
             Application.Quit();
@@ -30,6 +26,9 @@ namespace HoloLensModule.Environment
 #endif
         }
 
+        /// <summary>
+        /// デバイス名
+        /// </summary>
         public static string DeviceName
         {
             get
@@ -38,110 +37,104 @@ namespace HoloLensModule.Environment
             }
         }
 
+        /// <summary>
+        /// インターネットに接続しているIPアドレス
+        /// </summary>
         public static string IPAddress
         {
             get
             {
                 string ipaddress = "";
 #if WINDOWS_UWP
-                var host = NetworkInformation.GetHostNames();
-                foreach (var item in host)
+                foreach (var item in NetworkInformation.GetHostNames())
                 {
                     if (item.Type == Windows.Networking.HostNameType.Ipv4 && item.IPInformation != null)
                     {
-                        if (item.DisplayName.IndexOf("172.") == -1)
-                        {
-                            ipaddress = item.DisplayName;
-                        }
+                        if (item.DisplayName.IndexOf("172.") == -1)ipaddress = item.DisplayName;
                     }
                 }
-#elif UNITY_EDITOR || UNITY_STANDALONE
-                string hostname = Dns.GetHostName();
-                var address = Dns.GetHostAddresses(hostname);
-                foreach (var item in address)
+#else
+                foreach (var item in Dns.GetHostAddresses(Dns.GetHostName()))
                 {
-                    if (item.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork && !item.ToString().StartsWith("172."))
+                    if (item.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     {
-                        ipaddress = item.ToString();
+                        if (!item.ToString().StartsWith("172.")) ipaddress = item.ToString();
                     }
                 }
-                //ipaddress = UnityEngine.Network.player.ipAddress;
 #endif
                 return ipaddress;
             }
         }
 
+        /// <summary>
+        /// インターネットに接続しているサブネットマスク
+        /// </summary>
         public static string Subnetmask
         {
             get
             {
                 string subnetmask = "";
 #if WINDOWS_UWP
-                var host = NetworkInformation.GetHostNames();
-                foreach (var item in host)
+                foreach (var item in NetworkInformation.GetHostNames())
                 {
                     if (item.Type == Windows.Networking.HostNameType.Ipv4 && item.IPInformation != null)
                     {
                         if (item.DisplayName.IndexOf("172.") == -1)
                         {
-                            byte length = item.IPInformation.PrefixLength.Value;
-                            BitArray bit = new BitArray(32, false);
-                            for (int i = 0; i < length; i++)
-                            {
-                                bit[i] = true;
-                            }
-                            byte[] c1 = new byte[4];
+                            var bit = new BitArray(32, false);
+                            for (int i = 0; i < item.IPInformation.PrefixLength.Value; i++)bit[i] = true;
+                            var c1 = new byte[4];
                             ((ICollection)bit).CopyTo(c1, 0);
                             subnetmask = c1[0].ToString() + "." + c1[1].ToString() + "." + c1[2].ToString() + "." + c1[3].ToString();
                         }
                     }
                 }
-#elif UNITY_EDITOR || UNITY_STANDALONE
-                var info = System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces();
-            foreach (var item in info)
-            {
-                if (item.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
-                    item.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback &&
-                    item.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Tunnel)
+#else
+                foreach (var item in System.Net.NetworkInformation.NetworkInterface.GetAllNetworkInterfaces())
                 {
-                    var ips = item.GetIPProperties();
-                    if (ips != null)
+                    if (item.OperationalStatus == System.Net.NetworkInformation.OperationalStatus.Up &&
+                        item.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Loopback &&
+                        item.NetworkInterfaceType != System.Net.NetworkInformation.NetworkInterfaceType.Tunnel)
                     {
-                        foreach (var ip in ips.UnicastAddresses)
+                        var ips = item.GetIPProperties();
+                        if (ips != null)
                         {
-                            if (IPAddress == ip.Address.ToString())
+                            var ipAddress = IPAddress;
+                            foreach (var ip in ips.UnicastAddresses)
                             {
-                                subnetmask = ip.IPv4Mask.ToString();
+                                if (ipAddress == ip.Address.ToString()) subnetmask = ip.IPv4Mask.ToString();
                             }
                         }
                     }
                 }
-            }
 #endif
                 return subnetmask;
             }
         }
 
+        /// <summary>
+        /// ディレクティッドブロードキャストアドレス
+        /// </summary>
         public static string DirectedBroadcastAddress
         {
             get
             {
-                byte[] ipb = new byte[4];
                 var ips = IPAddress.Split('.');
                 string address = "";
-                if (ips != null && ips.Length == 4)
+                if (ips.Length == 4)
                 {
                     var masks = Subnetmask.Split('.');
-                    for (int i = 0; i < 4; i++)
-                    {
-                        ipb[i] = (byte)(byte.Parse(ips[i]) | ~byte.Parse(masks[i]));
-                    }
+                    var ipb = new byte[4];
+                    for (var i = 0; i < ipb.Length; i++) ipb[i] = (byte) (byte.Parse(ips[i]) | ~byte.Parse(masks[i]));
                     address = ipb[0].ToString() + "." + ipb[1].ToString() + "." + ipb[2].ToString() + "." + ipb[3].ToString();
                 }
                 return address;
             }
         }
 
+        /// <summary>
+        /// バッテリー残量
+        /// </summary>
         public static int PowerLevel
         {
             get
@@ -150,6 +143,9 @@ namespace HoloLensModule.Environment
             }
         }
 
+        /// <summary>
+        /// 接続中のWifiのSSID
+        /// </summary>
         public static string WifiSSID
         {
             get
@@ -157,16 +153,15 @@ namespace HoloLensModule.Environment
                 string ssid = "";
 #if WINDOWS_UWP
                 var profile = NetworkInformation.GetInternetConnectionProfile();
-                if (profile.IsWlanConnectionProfile==true)
-                {
-                    ssid = profile.WlanConnectionProfileDetails.GetConnectedSsid();
-                }
-#elif UNITY_EDITOR || UNITY_STANDALONE
+                if (profile.IsWlanConnectionProfile==true)ssid = profile.WlanConnectionProfileDetails.GetConnectedSsid();
 #endif
                 return ssid;
             }
         }
 
+        /// <summary>
+        /// 接続中のWifiの電波強度
+        /// </summary>
         public static byte? WifiSignalBars
         {
             get
@@ -174,16 +169,15 @@ namespace HoloLensModule.Environment
                 byte? signal = null;
 #if WINDOWS_UWP
                 var profile = NetworkInformation.GetInternetConnectionProfile();
-                if (profile.IsWlanConnectionProfile == true)
-                {
-                    signal = profile.GetSignalBars();
-                }
-#elif UNITY_EDITOR || UNITY_STANDALONE
+                if (profile.IsWlanConnectionProfile == true)signal = profile.GetSignalBars();
 #endif
                 return signal;
             }
         }
 
+        /// <summary>
+        /// 使用メモリ
+        /// </summary>
         public static long WorkingSetMemory
         {
             get
@@ -191,7 +185,7 @@ namespace HoloLensModule.Environment
                 long memory = 0;
 #if WINDOWS_UWP
                 memory = (long)ProcessDiagnosticInfo.GetForCurrentProcess().MemoryUsage.GetReport().WorkingSetSizeInBytes;
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
                 memory = System.Environment.WorkingSet;
 #endif
                 return memory;

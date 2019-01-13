@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Windows.Networking.Sockets;
 using System.IO;
 using System.Diagnostics;
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
 using System.Net.Sockets;
 #endif
 
@@ -18,7 +18,7 @@ namespace HoloLensModule.Network
 #if WINDOWS_UWP
         private StreamSocketListener socketlistener = null;
         private List<StreamWriter> streamList = new List<StreamWriter>();
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
         private TcpListener tcpListener = null;
         private List<NetworkStream> streamList = new List<NetworkStream>();
 #endif
@@ -40,7 +40,7 @@ namespace HoloLensModule.Network
                 socketlistener.ConnectionReceived += ConnectionReceived;
                 await socketlistener.BindServiceNameAsync(port.ToString());
             });
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
             tcpListener = new TcpListener(IPAddress.Any, port);
             tcpListener.Start();
             tcpListener.BeginAcceptTcpClient(AcceptTcpClient, tcpListener);
@@ -51,7 +51,7 @@ namespace HoloLensModule.Network
         {
 #if WINDOWS_UWP
             socketlistener.Dispose();
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
             tcpListener.Stop();
 #endif
             isActiveThread = false;
@@ -60,18 +60,18 @@ namespace HoloLensModule.Network
 #if WINDOWS_UWP
         private async void ConnectionReceived(StreamSocketListener sender, StreamSocketListenerConnectionReceivedEventArgs args)
         {
-            StreamReader reader = new StreamReader(args.Socket.InputStream.AsStreamForRead());
-            StreamWriter writer = new StreamWriter(args.Socket.OutputStream.AsStreamForWrite());
+            var reader = new StreamReader(args.Socket.InputStream.AsStreamForRead());
+            var writer = new StreamWriter(args.Socket.OutputStream.AsStreamForWrite());
             streamList.Add(writer);
-            byte[] bytes = new byte[65536];
+            var bytes = new byte[65536];
             while (isActiveThread)
             {
                 try
                 {
-                    int num = await reader.BaseStream.ReadAsync(bytes, 0, bytes.Length);
+                    var num = await reader.BaseStream.ReadAsync(bytes, 0, bytes.Length);
                     if (num > 0)
                     {
-                        byte[] data = new byte[num];
+                        var data = new byte[num];
                         Array.Copy(bytes, 0, data, 0, num);
                         for (int i = 0; i < streamList.Count; i++)
                         {
@@ -86,31 +86,28 @@ namespace HoloLensModule.Network
                 }
             }
         }
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
         private void AcceptTcpClient(IAsyncResult ar)
         {
             var listener = (TcpListener)ar.AsyncState;
 
-            TcpClient tcpClient = listener.EndAcceptTcpClient(ar);
+            var tcpClient = listener.EndAcceptTcpClient(ar);
             listener.BeginAcceptTcpClient(AcceptTcpClient, listener);
             tcpClient.ReceiveTimeout = 100;
-            NetworkStream stream = tcpClient.GetStream();
+            var stream = tcpClient.GetStream();
             streamList.Add(stream);
-            byte[] bytes = new byte[tcpClient.ReceiveBufferSize];
+            var bytes = new byte[tcpClient.ReceiveBufferSize];
 
             while (isActiveThread)
             {
                 try
                 {
-                    int num = stream.Read(bytes, 0, bytes.Length);
+                    var num = stream.Read(bytes, 0, bytes.Length);
                     if (num > 0)
                     {
                         for (int i = 0; i < streamList.Count; i++)
                         {
-                            if (streamList[i].CanWrite == true)
-                            {
-                                streamList[i].Write(bytes, 0, num);
-                            }
+                            if (streamList[i].CanWrite == true) streamList[i].Write(bytes, 0, num);
                         }
                     }
                 }
