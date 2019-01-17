@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
-using HoloLensModule.Utility;
+#if UNITY_EDITOR||WINDOWS_UWP
 using UnityEngine;
 #if UNITY_2017_2_OR_NEWER
 using UnityEngine.XR.WSA;
@@ -196,3 +196,4 @@ namespace HoloLensModule.Input
         }
     }
 }
+#endif
