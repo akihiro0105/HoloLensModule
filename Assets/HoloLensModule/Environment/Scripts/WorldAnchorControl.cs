@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR||WINDOWS_UWP
 #if UNITY_2017_2_OR_NEWER
 using UnityEngine.XR.WSA;
 using UnityEngine.XR.WSA.Persistence;
@@ -195,3 +196,4 @@ namespace HoloLensModule.Environment
 #endregion
     }
 }
+#endif
