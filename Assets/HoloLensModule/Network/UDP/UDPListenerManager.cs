@@ -57,13 +57,19 @@ namespace HoloLensModule.Network
 #if WINDOWS_UWP
         async void MessageReceived(DatagramSocket sender, DatagramSocketMessageReceivedEventArgs args)
         {
-            var reader = new StreamReader(args.GetDataStream().AsStreamForRead());
-            var data = await reader.ReadLineAsync();
-            if (ListenerMessageEvent != null) ListenerMessageEvent(data, args.RemoteAddress.DisplayName);
-            using (var ms = new MemoryStream())
+            if (ListenerMessageEvent != null)
             {
-                await reader.BaseStream.CopyToAsync(ms);
-                if (ListenerByteEvent != null) ListenerByteEvent(ms.ToArray(), args.RemoteAddress.DisplayName);
+                var reader = new StreamReader(args.GetDataStream().AsStreamForRead());
+                var data = await reader.ReadLineAsync();
+                ListenerMessageEvent(data, args.RemoteAddress.DisplayName);
+            }
+
+            if (ListenerByteEvent != null)
+            {
+                var readData = args.GetDataReader();
+                var byteData = new byte[readData.UnconsumedBufferLength];
+                readData.ReadBytes(byteData);
+                ListenerByteEvent(byteData, args.RemoteAddress.DisplayName);
             }
         }
 #else
