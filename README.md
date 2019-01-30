@@ -51,6 +51,8 @@ HoloLens開発などのUnityで利用できるスクリプトモジュールで�
   + UDPの受信側機能を提供
 - UDPSenderManager.cs
   + UDPの送信側機能を提供
+- SharingManager.cs
+  + UDPによるシェアリング機能を提供
 
 ## Utility : boundingboxやデバッグログ取得などの機能
 - Bodylocked.cs
@@ -68,3 +70,5 @@ HoloLens開発などのUnityで利用できるスクリプトモジュールで�
   + TPC通信のサンプル
 - UDPSample.unity
   + UDP通信のサンプル
+- SharingSample.unity
+  + UDPによるシェアリングのサンプル
