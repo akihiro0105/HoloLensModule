@@ -18,10 +18,10 @@ namespace HoloLensModule.Network
     public class TCPClientManager
     {
         public delegate void ListenerMessageEventHandler(string ms);
-        public ListenerMessageEventHandler ListenerMessageEvent;
+        public event ListenerMessageEventHandler ListenerMessageEvent;
 
         public delegate void ListenerByteEventHandler(byte[] data);
-        public ListenerByteEventHandler ListenerByteEvent;
+        public event ListenerByteEventHandler ListenerByteEvent;
 
 #if WINDOWS_UWP
         private StreamWriter writer = null;

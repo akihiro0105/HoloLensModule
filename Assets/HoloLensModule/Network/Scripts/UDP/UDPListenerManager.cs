@@ -15,11 +15,11 @@ namespace HoloLensModule.Network
     {
         public delegate void ListenerMessageEventHandler(string ms, string address);
 
-        public ListenerMessageEventHandler ListenerMessageEvent;
+        public event ListenerMessageEventHandler ListenerMessageEvent;
 
         public delegate void ListenerByteEventHandler(byte[] data, string address);
 
-        public ListenerByteEventHandler ListenerByteEvent;
+        public event ListenerByteEventHandler ListenerByteEvent;
 
 #if WINDOWS_UWP
         private Task task = null;
