@@ -58,11 +58,17 @@ namespace HoloLensModule.Environment
                 {
                     if (item.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     {
-                        if (!item.ToString().StartsWith("172.")) ipaddress = item.ToString();
+                        if (!item.ToString().StartsWith("172."))
+#if !UNITY_EDITOR
+#if UNITY_IOS
+                        if (item.ToString().StartsWith("192."))
+#endif
+#endif
+                            ipaddress = item.ToString();
                     }
                 }
 #endif
-                return ipaddress;
+                            return ipaddress;
             }
         }
 
@@ -107,6 +113,11 @@ namespace HoloLensModule.Environment
                         }
                     }
                 }
+#if !UNITY_EDITOR
+#if UNITY_ANDROID || UNITY_IOS
+                subnetmask="255.255.255.0";
+#endif
+#endif
 #endif
                 return subnetmask;
             }

@@ -3,7 +3,7 @@
 using System.IO;
 using System.Threading.Tasks;
 using Windows.Networking.Sockets;
-#elif UNITY_EDITOR || UNITY_STANDALONE
+#else
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
