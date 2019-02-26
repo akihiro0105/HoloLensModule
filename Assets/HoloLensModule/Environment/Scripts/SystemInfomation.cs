@@ -62,7 +62,7 @@ namespace HoloLensModule.Environment
                     }
                 }
 #endif
-#if !UNITY_EDITOR && UNITY_IOS
+#if !UNITY_EDITOR && UNITY_IOS && !UNITY_2018_1_OR_NEWER
                 ipaddress = UnityEngine.Network.player.ipAddress;
 #endif
                 return ipaddress;
