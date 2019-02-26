@@ -58,17 +58,14 @@ namespace HoloLensModule.Environment
                 {
                     if (item.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
                     {
-                        if (!item.ToString().StartsWith("172."))
-#if !UNITY_EDITOR
-#if UNITY_IOS
-                        if (item.ToString().StartsWith("192."))
-#endif
-#endif
-                            ipaddress = item.ToString();
+                        if (!item.ToString().StartsWith("172.")) ipaddress = item.ToString();
                     }
                 }
 #endif
-                            return ipaddress;
+#if !UNITY_EDITOR && UNITY_IOS && !UNITY_2018_1_OR_NEWER
+                ipaddress = UnityEngine.Network.player.ipAddress;
+#endif
+                return ipaddress;
             }
         }
 
